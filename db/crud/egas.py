@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.egas import EGAS
+from db.models import EGAS
 
 
 async def create(

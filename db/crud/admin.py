@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.admin import Admin
+from db.models import Admin
 
 
 async def create(session: AsyncSession, *, max_id: int) -> Admin:

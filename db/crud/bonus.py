@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.bonus import Bonus
+from db.models import Bonus
 
 
 async def create(
