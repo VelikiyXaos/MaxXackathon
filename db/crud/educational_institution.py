@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.educational_institution import EducationalInstitution
+from db.models import EducationalInstitution
 
 
 async def create(

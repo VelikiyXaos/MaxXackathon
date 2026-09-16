@@ -1,5 +1,5 @@
-from db.crud import admin, application, bonus, city, educational_institution
-from db.crud import egas, ei_with_egas, partner, student, student_bonus, subject
+from . import admin, application, bonus, city, educational_institution
+from . import egas, ei_with_egas, partner, student, student_bonus, subject
 
 __all__ = [
     "admin",
