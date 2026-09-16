@@ -1,0 +1,26 @@
+import os
+
+from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
+
+load_dotenv()
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://hackathon:hackathon@localhost:5432/hackathon",
+)
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        "Переменная окружения DATABASE_URL не задана. "
+        "Скопируйте .env.template в .env и укажите строку подключения."
+    )
+
+engine = create_async_engine(DATABASE_URL, echo=False)
+
+SessionFactory = async_sessionmaker(engine, expire_on_commit=False)
+
+
+class Base(DeclarativeBase):
+    pass
