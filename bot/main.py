@@ -4,7 +4,14 @@ import logging
 from maxapi import Bot, Dispatcher
 
 from bot.config import BOT_TOKEN
-from bot.handlers import callbacks_router, setup_error_handlers, start_router
+from bot.handlers import (
+    admin_router,
+    bonus_router,
+    partner_router,
+    setup_error_handlers,
+    start_router,
+    student_router,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +26,13 @@ def create_bot() -> tuple[Bot, Dispatcher]:
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
 
-    dp.include_routers(start_router, callbacks_router)
+    dp.include_routers(
+        start_router,
+        student_router,
+        partner_router,
+        bonus_router,
+        admin_router,
+    )
     setup_error_handlers(dp)
 
     return bot, dp
