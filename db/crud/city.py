@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import City
+from db.models import City, Subject
 
 
 async def create(
@@ -61,3 +61,14 @@ async def delete(session: AsyncSession, city_id: int) -> bool:
     await session.delete(city)
     await session.commit()
     return True
+
+
+async def get_subject_names_by_city_name(session: AsyncSession, city_name: str) -> list[str]:
+    """Возвращает список названий регионов, в которых есть город с указанным названием."""
+    result = await session.execute(
+        select(Subject.name)
+        .join(City, City.subject_id == Subject.id)
+        .where(City.name == city_name)
+        .distinct()
+    )
+    return [row[0] for row in result.fetchall()]
