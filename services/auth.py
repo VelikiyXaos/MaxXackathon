@@ -4,22 +4,15 @@ from db.crud import student as student_crud
 from . import session_scope
 
 
-async def is_student(max_id: int) -> bool:
-    """Возвращает True, если ученик с указанным max_id существует."""
+_ROLE_CRUDS = (
+    ("admin", admin_crud),
+    ("student", student_crud),
+    ("partner", partner_crud),
+)
+
+async def get_user_role(max_id: int) -> str | None:
     async with session_scope() as session:
-        student = await student_crud.get_by_max_id(session, max_id)
-        return student is not None
-
-
-async def is_partner(max_id: int) -> bool:
-    """Возвращает True, если партнёр с указанным max_id существует."""
-    async with session_scope() as session:
-        partner = await partner_crud.get_by_max_id(session, max_id)
-        return partner is not None
-
-
-async def is_admin(max_id: int) -> bool:
-    """Возвращает True, если администратор с указанным max_id существует."""
-    async with session_scope() as session:
-        admin = await admin_crud.get_by_max_id(session, max_id)
-        return admin is not None
+        for role, crud in _ROLE_CRUDS:
+            if await crud.get_by_max_id(session, max_id) is not None:
+                return role
+    return None
