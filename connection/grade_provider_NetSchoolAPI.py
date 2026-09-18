@@ -1,18 +1,13 @@
-from __future__ import annotations
-
 from datetime import date
-from typing import Any
-
-from netschoolapi import NetSchoolAPI
 
 from ABS_grade_provider import AbstractGradeProvider
 
 
-class NetSchoolGradeProvider(AbstractGradeProvider):
+class EgasGradeProvider(AbstractGradeProvider):
     def __init__(
         self,
         *,
-        client: NetSchoolAPI,
+        client,
         today: date | None = None,
     ) -> None:
         super().__init__(today=today)
@@ -25,25 +20,25 @@ class NetSchoolGradeProvider(AbstractGradeProvider):
         date_from: date,
         date_to: date,
     ) -> list[int]:
-        diary = await self._client.diary(start=date_from, end=date_to)
+        diary = await self._client.get_diary(
+            student_id=student_id,
+            date_from=date_from,
+            date_to=date_to,
+        )
 
         grades: list[int] = []
-        for day in diary.schedule:
-            if not (date_from <= day.day <= date_to):
-                continue
-            for lesson in day.lessons:
-                for assignment in lesson.assignments:
-                    grade = self._extract_mark(assignment)
+
+        for day in diary["weekDays"]:
+            for lesson in day["lessons"]:
+                for assignment in lesson["assignments"]:
+                    mark = assignment.get("mark")
+
+                    if mark is None:
+                        continue
+
+                    grade = mark.get("mark")
+
                     if grade is not None:
                         grades.append(grade)
-        return grades
 
-    def _extract_mark(self, assignment: Any) -> int | None:
-        mark = getattr(assignment, "mark", None)
-        if mark is None:
-            return None
-        try:
-            value = int(mark)
-        except (TypeError, ValueError):
-            return None
-        return value if value in self.GRADE_TYPES else None
+        return grades
