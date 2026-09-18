@@ -37,7 +37,7 @@ class AbstractGradeProvider(ABC):
         current = today or self._today
         period_start, period_end = self._academic_year_period(current)
 
-        raw_grades = self._fetch_grades(
+        raw_grades = await self._fetch_grades(
             student_id=student_id,
             date_from=period_start,
             date_to=period_end,
