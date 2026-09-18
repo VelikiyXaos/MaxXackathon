@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import date, time
 from typing import Callable
 
-from mock_esuo.models import Assignment, Day, Diary, Lesson
+from mock_egas.models import Assignment, Day, Diary, Lesson
 
 WEEK_START: date = date(2026, 9, 14)  # понедельник
 WEEK_END: date = date(2026, 9, 20)    # воскресенье

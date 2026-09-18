@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.student import Student
+from db.models import Student
 
 
 async def create(
@@ -62,6 +62,14 @@ async def get_by_login(session: AsyncSession, login: str) -> Student | None:
     """Возвращает ученика по логину или None."""
     result = await session.execute(
         select(Student).where(Student.login == login)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_by_max_id(session: AsyncSession, max_id: int) -> Student | None:
+    """Возвращает ученика по внешнему id (max_id) или None."""
+    result = await session.execute(
+        select(Student).where(Student.max_id == max_id)
     )
     return result.scalar_one_or_none()
 

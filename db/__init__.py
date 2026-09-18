@@ -1,5 +1,5 @@
-from db.database import Base, SessionFactory, engine
-from db.models import (
+from .database import Base, SessionFactory, engine
+from .models import (
     Admin,
     Application,
     Bonus,

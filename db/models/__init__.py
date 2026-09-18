@@ -1,13 +1,13 @@
-from db.models.admin import Admin
-from db.models.application import Application
-from db.models.associations import EI_with_EGAS, student_bonus
-from db.models.bonus import Bonus
-from db.models.city import City
-from db.models.educational_institution import EducationalInstitution
-from db.models.egas import EGAS
-from db.models.partner import Partner
-from db.models.student import Student
-from db.models.subject import Subject
+from .admin import Admin
+from .application import Application
+from .associations import EI_with_EGAS, student_bonus
+from .bonus import Bonus
+from .city import City
+from .educational_institution import EducationalInstitution
+from .egas import EGAS
+from .partner import Partner
+from .student import Student
+from .subject import Subject
 
 __all__ = [
     "Subject",

@@ -5,15 +5,15 @@
 и фиксированные тест-кейсы в `scenarios`.
 
 Пример:
-    from mock_esuo import scenario
+    from mock_egas import scenario
 
     diary = scenario("regular_week")
 
 Запуск самопроверки всех сценариев:
-    python -m mock_esuo
+    python -m mock_egas
 """
 
-from mock_esuo.models import (
+from mock_egas.models import (
     ASSIGNMENT_TYPE_IDS,
     ASSIGNMENT_TYPES,
     Assignment,
@@ -21,7 +21,8 @@ from mock_esuo.models import (
     Diary,
     Lesson,
 )
-from mock_esuo.scenarios import (
+
+from mock_egas.scenarios import (
     SCENARIOS,
     WEEK_END,
     WEEK_START,
