@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.partner import Partner
+from db.models import Partner
 
 
 async def create(
@@ -43,6 +43,14 @@ async def update(
     await session.commit()
     await session.refresh(partner)
     return partner
+
+
+async def get_by_max_id(session: AsyncSession, max_id: int) -> Partner | None:
+    """Возвращает партнёра по внешнему id (max_id) или None."""
+    result = await session.execute(
+        select(Partner).where(Partner.max_id == max_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def delete(session: AsyncSession, partner_id: int) -> bool:

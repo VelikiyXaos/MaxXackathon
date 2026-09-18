@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.subject import Subject
+from db.models import Subject
 
 
 async def create(session: AsyncSession, *, name: str) -> Subject:

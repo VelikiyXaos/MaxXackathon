@@ -2,9 +2,9 @@
 
 Запуск из корня проекта:
 
-    python -m mock_esuo              # сводка + проверки инвариантов
-    python -m mock_esuo --raw <имя>  # «сырой» JSON-ответ АПИ для сценария
-    python -m mock_esuo --text <имя> # текстовое представление дневника
+    python -m mock_egas              # сводка + проверки инвариантов
+    python -m mock_egas --raw <имя>  # «сырой» JSON-ответ АПИ для сценария
+    python -m mock_egas --text <имя> # текстовое представление дневника
 
 Проверки инвариантов повторяют ограничения схем netschoolapi:
 - неделя фиксирована: понедельник 2026-09-14 — воскресенье 2026-09-20;
@@ -26,8 +26,8 @@ import json
 import sys
 from datetime import date, timedelta
 
-from mock_esuo.models import Assignment, Day, Diary, Lesson
-from mock_esuo.scenarios import SCENARIOS, WEEK_END, WEEK_START
+from mock_egas.models import Assignment, Day, Diary, Lesson
+from mock_egas.scenarios import SCENARIOS, WEEK_END, WEEK_START
 
 #: Допустимые оценки (в «Сетевом городе» оценки 2–5, единица не ставится).
 VALID_MARKS: set[int | None] = {None, 2, 3, 4, 5}
