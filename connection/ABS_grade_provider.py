@@ -13,14 +13,14 @@ class AbstractGradeProvider(ABC):
 
     GRADE_TYPES: tuple[int, ...] = (1, 2, 3, 4, 5)
 
-    """def __init__(self, *, today: date | None = None) -> None:
+    def __init__(self, *, today: date | None = None) -> None:
         # ДЛЯ ТЕСТИРОВАНИЯ : изменение "текущей даты"
-        self._today = today or date.today()"""
+        self._today = today or date.today()
 
 
 
     # Публичный API
-    def get_grades_count(
+    async def get_grades_count(
         self,
         *,
         student_id: int,
@@ -74,7 +74,7 @@ class AbstractGradeProvider(ABC):
         return counts
 
     @abstractmethod
-    def _fetch_grades(
+    async def _fetch_grades(
         self,
         *,
         student_id: int,
