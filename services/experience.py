@@ -1,4 +1,4 @@
-from db.crud import student as student_crud
+﻿from db.crud import student as student_crud
 from . import session_scope
 
 
@@ -32,3 +32,20 @@ async def calculate_and_save_school_experience(student_id: int, grades: dict[int
         await session.refresh(student)
 
     return total_xp
+
+
+def get_xp_for_level(level: int) -> int:
+    """
+    Возвращает количество опыта, необходимого для достижения уровня.
+
+    Args:
+        level: Номер уровня (0-15+)
+
+    Returns:
+        XP, необходимый для достижения данного уровня
+    """
+    if level <= 0:
+        return 0
+    if level > 15:
+        level = 15
+    return 100 * level * level + 50 * level
