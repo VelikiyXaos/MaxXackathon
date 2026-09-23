@@ -100,3 +100,19 @@ async def delete(session: AsyncSession, student_id: int) -> bool:
     await session.delete(student)
     await session.commit()
     return True
+
+
+async def exists_by_max_id(session: AsyncSession, max_id: int) -> bool:
+    """Проверяет, зарегистрирован ли ученик с таким max_id."""
+    result = await session.execute(
+        select(Student.id).where(Student.max_id == max_id)
+    )
+    return result.first() is not None
+
+
+async def exists_by_login(session: AsyncSession, login: str) -> bool:
+    """Проверяет, занят ли логин."""
+    result = await session.execute(
+        select(Student.id).where(Student.login == login)
+    )
+    return result.first() is not None

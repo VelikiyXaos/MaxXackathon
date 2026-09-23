@@ -69,3 +69,28 @@ async def delete(session: AsyncSession, institution_id: int) -> bool:
     await session.delete(institution)
     await session.commit()
     return True
+
+
+async def search_by_name(
+    session: AsyncSession, query: str, *, limit: int = 10
+) -> list[EducationalInstitution]:
+    """Ищет учреждения по подстроке в названии."""
+    result = await session.execute(
+        select(EducationalInstitution)
+        .where(EducationalInstitution.name.ilike(f"%{query}%"))
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
+async def get_by_city_and_name(
+    session: AsyncSession, city_id: int, name: str
+) -> EducationalInstitution | None:
+    """Ищет учреждение в конкретном городе по точному названию."""
+    result = await session.execute(
+        select(EducationalInstitution).where(
+            EducationalInstitution.city_id == city_id,
+            EducationalInstitution.name == name,
+        )
+    )
+    return result.scalar_one_or_none()
