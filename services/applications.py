@@ -1,3 +1,5 @@
+# services
+
 async def get_applications() -> list[dict]:
     # TODO: реализовать получение списка заявок партнёров
     # (db.crud.application.get_all).

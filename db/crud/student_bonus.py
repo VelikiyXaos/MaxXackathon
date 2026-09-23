@@ -1,3 +1,5 @@
+#crud
+
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
