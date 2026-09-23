@@ -4,14 +4,25 @@ from . import session_scope
 
 async def calculate_and_save_school_experience(student_id: int, grades: dict[int, int]) -> int:
     """
-    Считает суммарный опыт за оценки по школьной системе и записывает в БД.
+    Пересчитывает суммарный опыт студента за оценки по школьной системе
+    и записывает в БД.
+
+    Семантика (по ТЗ):
+        - опыт пересчитывается заново по всем оценкам, переданным в `grades`,
+          и ЗАПИСЫВАЕТСЯ как абсолютное значение (не прибавляется);
+        - провайдер оценок (`AbstractGradeProvider`) считает оценки только
+          с 1 сентября текущего учебного года, поэтому 1 сентября опыт
+          автоматически обнуляется;
+        - ежедневный прогон в 00:00 идемпотентен: повторный вызов с теми же
+          оценками не начисляет опыт повторно.
 
     Args:
         student_id: ID студента
         grades: Словарь с оценками, ключи - типы оценок (1,2,3,4,5), значения - их количество
 
     Returns:
-        Начисленный опыт
+        Изменение опыта (дельту): новое значение минус предыдущее.
+        Отрицательное — опыт снизился (например, после 1 сентября).
     """
     xp_per_grade = {
         5: 50,
@@ -27,11 +38,12 @@ async def calculate_and_save_school_experience(student_id: int, grades: dict[int
         student = await student_crud.get(session, student_id)
         if student is None:
             raise ValueError(f"Student with id {student_id} not found")
-        student.experience += total_xp
+        delta = total_xp - student.experience
+        student.experience = total_xp
         await session.commit()
         await session.refresh(student)
 
-    return total_xp
+    return delta
 
 
 def get_xp_for_level(level: int) -> int:
