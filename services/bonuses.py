@@ -1,3 +1,5 @@
+# services
+
 async def get_student_bonuses(max_id: int) -> list[dict]:
     # TODO: реализовать получение списка бонусов учащегося
     return []

@@ -1,3 +1,5 @@
+# models
+
 from .admin import Admin
 from .application import Application
 from .associations import EI_with_EGAS, student_bonus
