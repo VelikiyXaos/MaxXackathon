@@ -10,7 +10,7 @@ from bot.payloads import AgreementPayload, CitySelectionPayload, MyBonusesPayloa
 from bot.states import StudentRegistration
 from services import auth, bonuses, progress, registration
 
-import datetime
+
 
 router = Router(router_id="student")
 
@@ -83,7 +83,7 @@ async def on_fio_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.YEAR)
 async def on_year_input(event: MessageCreated, context):
-    """Год принят — запрашиваем группу."""
+    """Год принят — запрашиваем класс."""
     year_text = _message_text(event)
     try:
         year = int(year_text)
@@ -101,7 +101,7 @@ async def on_year_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.GROUP)
 async def on_group_input(event: MessageCreated, context):
-    """Группа принята — запрашиваем логин."""
+    """Класс принята — запрашиваем логин."""
     await context.update_data(group=_message_text(event))
     await context.set_state(StudentRegistration.LOGIN)
     await event.message.answer(text=messages.LOGIN_REQUEST)
