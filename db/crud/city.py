@@ -64,7 +64,7 @@ async def delete(session: AsyncSession, city_id: int) -> bool:
     await session.commit()
     return True
 
-
+# 
 async def search_by_name(
     session: AsyncSession, query: str, *, limit: int = 10
 ) -> list[City]:
@@ -72,6 +72,24 @@ async def search_by_name(
     result = await session.execute(
         select(City)
         .where(City.name.ilike(f"%{query}%"))
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+async def search_by_subject_and_name(
+    session: AsyncSession,
+    subject_id: int,
+    query: str,
+    *,
+    limit: int = 10,
+) -> list[City]:
+    """Ищет города внутри региона по подстроке в названии."""
+    result = await session.execute(
+        select(City)
+        .where(
+            City.subject_id == subject_id,
+            City.name.ilike(f"%{query}%"),
+        )
         .limit(limit)
     )
     return list(result.scalars())

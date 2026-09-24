@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import Subject
+from db.models import City, Subject
 
 
 async def create(session: AsyncSession, *, name: str) -> Subject:
@@ -50,3 +50,16 @@ async def delete(session: AsyncSession, subject_id: int) -> bool:
     await session.delete(subject)
     await session.commit()
     return True
+
+async def search_by_city_name(
+    session: AsyncSession, query: str, *, limit: int = 10
+) -> list[Subject]:
+    """Ищет регионы, в которых есть город с подстрокой в названии."""
+    result = await session.execute(
+        select(Subject)
+        .join(City, City.subject_id == Subject.id)
+        .where(City.name.ilike(f"%{query}%"))
+        .distinct()
+        .limit(limit)
+    )
+    return list(result.scalars())

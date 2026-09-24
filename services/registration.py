@@ -5,10 +5,18 @@ from dataclasses import dataclass
 from db.crud import city as city_crud
 from db.crud import educational_institution as ei_crud
 from db.crud import student as student_crud
+from db.crud import subject as subject_crud
 from . import session_scope
 
 
 @dataclass
+class SubjectCandidate:
+    """Кандидат по поиску региона."""
+
+    id_: int
+    name: str
+
+
 class CityCandidate:
     """Кандидат по поиску города/региона."""
 
@@ -28,13 +36,27 @@ class RegistrationError(Exception):
     """Ошибка регистрации с человекочитаемым сообщением."""
 
 
-async def search_cities(query: str) -> list[CityCandidate]:
-    """Поиск городов/регионов по названию."""
+async def search_subjects_by_city(query: str) -> list[SubjectCandidate]:
+    """Шаг 1: по названию города находит регионы, где такой город есть."""
     query = query.strip()
     if len(query) < 2:
         return []
     async with session_scope() as session:
-        cities = await city_crud.search_by_name(session, query)
+        subjects = await subject_crud.search_by_city_name(session, query)
+    return [SubjectCandidate(id_=s.id, name=s.name) for s in subjects]
+
+
+async def search_cities_in_subject(
+    subject_id: int, query: str
+) -> list[CityCandidate]:
+    """Шаг 2: внутри выбранного региона ищет города по подстроке."""
+    query = query.strip()
+    if len(query) < 2:
+        return []
+    async with session_scope() as session:
+        cities = await city_crud.search_by_subject_and_name(
+            session, subject_id, query
+        )
     return [CityCandidate(id_=c.id, name=c.name) for c in cities]
 
 
@@ -62,11 +84,6 @@ async def register_student(
     password: str,
 ) -> None:
     """Регистрирует учащегося.
-
-    Проверяет:
-    - не зарегистрирован ли уже пользователь с таким max_id;
-    - существует ли город и учреждение;
-    - свободен ли логин.
     """
     fio_parts = fio.strip().split()
     if len(fio_parts) < 2:
