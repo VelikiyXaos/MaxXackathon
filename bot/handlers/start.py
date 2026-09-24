@@ -62,6 +62,14 @@ async def start_command(event: MessageCreated, context):
 @router.message_callback(RolePayload.filter())
 async def on_role_selection(event: MessageCallback, payload: RolePayload, context):
     """Начало регистрации в зависимости от выбранной роли."""
+    
+    user_id = event.get_ids()[1] or 0
+    if await auth.is_registered(user_id):
+        role = await auth.get_user_role(user_id)
+        text, keyboard = _role_entry(role)
+        await event.send(text=text, attachments=[keyboard])
+        return
+    
     if payload.value == ROLE_STUDENT:
         await context.set_state(StudentRegistration.AGREEMENT)
         await event.send(
