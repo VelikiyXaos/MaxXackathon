@@ -4,7 +4,7 @@ from maxapi.types import MessageCallback, MessageCreated
 from bot import messages
 from bot.payloads import AddBonusPayload, MyBonusesPayload, PartnerTypePayload
 from bot.states import BonusAdding, PartnerRegistration
-from services import bonuses, registration
+from services import auth, bonuses, registration
 
 router = Router(router_id="partner")
 
@@ -52,7 +52,12 @@ async def on_contacts_input(event: MessageCreated, context):
 async def on_my_bonuses(event: MessageCallback):
     """Кнопка «Мои бонусы» в меню коммерческого партнёра."""
     user_id = event.get_ids()[1] or 0
-    items = await bonuses.get_partner_bonuses(user_id)
+    partner = await auth.get_partner(user_id)
+    if partner is None:
+        await event.send(text=messages.UNKNOWN_COMMAND)
+        return
+
+    items = await bonuses.get_partner_bonuses(partner.id)
 
     if not items:
         await event.send(text=messages.PARTNER_BONUSES_EMPTY)

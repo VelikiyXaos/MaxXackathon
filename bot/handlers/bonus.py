@@ -4,7 +4,7 @@ from maxapi.types import MessageCallback, MessageCreated
 from bot import messages
 from bot.keyboards import commercial_partner_menu_keyboard
 from bot.states import BonusAdding
-from services import bonuses
+from services import auth, bonuses
 
 router = Router(router_id="bonus")
 
@@ -45,8 +45,14 @@ async def on_bonus_promo(event: MessageCreated, context):
     data = await context.get_data()
     await context.update_data(bonus_promo=_message_text(event))
 
+    partner = await auth.get_partner(event.get_ids()[1] or 0)
+    if partner is None:
+        await context.clear()
+        await event.message.answer(text=messages.UNKNOWN_COMMAND)
+        return
+
     await bonuses.add_bonus(
-        partner_id=event.get_ids()[1] or 0,  # TODO: заменить на внутренний id партнёра.
+        partner_id=partner.id,
         name=data.get("bonus_name", ""),
         condition=data.get("bonus_condition", ""),
         deadline=data.get("bonus_deadline", ""),
