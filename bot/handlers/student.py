@@ -8,7 +8,7 @@ from bot.keyboards import (
 )
 from bot.payloads import AgreementPayload, CitySelectionPayload, MyBonusesPayload, MyProgressPayload
 from bot.states import StudentRegistration
-from services import bonuses, progress, registration
+from services import auth, bonuses, progress, registration
 
 router = Router(router_id="student")
 
@@ -102,8 +102,14 @@ async def on_group_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.LOGIN)
 async def on_login_input(event: MessageCreated, context):
-    """Логин принят — запрашиваем пароль."""
-    await context.update_data(login=_message_text(event))
+    """Логин принят — проверяем доступность и запрашиваем пароль."""
+    login = _message_text(event)
+
+    if await auth.is_login_taken(login):
+        await event.message.answer(text=messages.LOGIN_TAKEN)
+        return
+
+    await context.update_data(login=login)
     await context.set_state(StudentRegistration.PASSWORD)
     await event.message.answer(text=messages.PASSWORD_REQUEST)
 
@@ -123,7 +129,7 @@ async def on_password_input(event: MessageCreated, context):
         group=data.get("group", ""),
         login=data.get("login", ""),
         password=data.get("password", ""),
-    )
+        )
 
     await context.clear()
     await event.message.answer(
