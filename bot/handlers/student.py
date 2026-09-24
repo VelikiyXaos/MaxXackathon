@@ -5,8 +5,15 @@ from bot import messages
 from bot.keyboards import (
     city_selection_keyboard,
     student_menu_keyboard,
+    subject_selection_keyboard,
 )
-from bot.payloads import AgreementPayload, CitySelectionPayload, MyBonusesPayload, MyProgressPayload
+from bot.payloads import (
+    AgreementPayload,
+    CitySelectionPayload,
+    MyBonusesPayload,
+    MyProgressPayload,
+    SubjectSelectionPayload,
+)
 from bot.states import StudentRegistration
 from services import auth, bonuses, progress, registration
 
@@ -30,29 +37,64 @@ async def on_accept_agreement(event: MessageCallback, context):
 
 @router.message_created(states=StudentRegistration.CITY)
 async def on_city_input(event: MessageCreated, context):
-    """Обработка ввода города."""
+    """Шаг 1: по названию города ищем регионы (субъекты), где он есть."""
     query = _message_text(event)
-    cities = await registration.search_cities(query)
+    subjects = await registration.search_subjects_by_city(query)
+
+    if not subjects:
+        await event.message.answer(text=messages.CITY_NOT_FOUND)
+        return
+
+    await context.update_data(city_query=query)
+
+    if len(subjects) == 1:
+        await _resolve_city_from_subject(event, context, subjects[0].id_, query)
+        return
+
+    await context.set_state(StudentRegistration.REGION)
+    await event.message.answer(
+        text=messages.REGION_SELECTION,
+        attachments=[subject_selection_keyboard(subjects)],
+    )
+
+
+@router.message_callback(SubjectSelectionPayload.filter())
+async def on_subject_selected(
+    event: MessageCallback,
+    payload: SubjectSelectionPayload,
+    context,
+):
+    """Регион выбран из списка — ищем город внутри него."""
+    data = await context.get_data()
+    await _resolve_city_from_subject(
+        event, context, payload.subject_id, data.get("city_query", "")
+    )
+
+
+async def _resolve_city_from_subject(event, context, subject_id: int, query: str):
+    """Шаг 2: ищет город в выбранном регионе и переходит к учреждению."""
+    cities = await registration.search_cities_in_subject(subject_id, query)
 
     if not cities:
-        await event.message.answer(text=messages.CITY_NOT_FOUND)
+        await event.send(text=messages.CITY_NOT_FOUND)
         return
 
     if len(cities) == 1:
         await context.update_data(city_id=cities[0].id_)
         await context.set_state(StudentRegistration.INSTITUTION)
-        await event.message.answer(text=messages.INSTITUTION_REQUEST)
-    else:
-        await context.set_state(StudentRegistration.REGION)
-        await event.message.answer(
-            text=messages.REGION_SELECTION,
-            attachments=[city_selection_keyboard(cities)],
-        )
+        await event.send(text=messages.INSTITUTION_REQUEST)
+        return
+
+    await context.set_state(StudentRegistration.CITY_CHOICE)
+    await event.send(
+        text=messages.REGION_SELECTION,
+        attachments=[city_selection_keyboard(cities)],
+    )
 
 
-@router.message_callback(CitySelectionPayload.filter())
+@router.message_callback(CitySelectionPayload.filter(), states=StudentRegistration.CITY_CHOICE)
 async def on_city_selected(event: MessageCallback, payload: CitySelectionPayload, context):
-    """Город/регион выбран из списка — запрашиваем учреждение."""
+    """Город выбран из списка — запрашиваем учреждение."""
     await context.update_data(city_id=payload.city_id)
     await context.set_state(StudentRegistration.INSTITUTION)
     await event.send(text=messages.INSTITUTION_REQUEST)
