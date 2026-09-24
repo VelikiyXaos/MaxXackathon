@@ -33,6 +33,12 @@ async def get_student(max_id: int):
         return await student_crud.get_by_max_id(session, max_id)
 
 
+async def is_login_taken(login: str) -> bool:
+    """Проверяет, занят ли логин другим учащимся."""
+    async with session_scope() as session:
+        return await student_crud.exists_by_login(session, login)
+
+
 async def get_partner(max_id: int):
     """Возвращает партнёра по MAX id или None."""
     async with session_scope() as session:
