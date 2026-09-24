@@ -90,7 +90,7 @@ async def on_year_input(event: MessageCreated, context):
     except ValueError:
         year = 0 
 
-    if year < 2000 or year > datetime.now().year:
+    if year < 1 or year > 11:
         await event.message.answer (text=messages.YEAR_INVALID)
         return
     
