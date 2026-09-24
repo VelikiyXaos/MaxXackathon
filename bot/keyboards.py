@@ -57,6 +57,22 @@ def city_selection_keyboard(cities: list) -> Attachment:
     return ButtonsPayload(buttons=rows).pack()
 
 
+def subject_selection_keyboard(subjects: list) -> Attachment:
+    """Inline-клавиатура выбора региона (субъекта) из найденных."""
+    rows = [
+        [
+            _callback_button(
+                subject.name,
+                payloads.SubjectSelectionPayload(
+                    subject_id=subject.id_, subject_name=subject.name
+                ),
+            )
+        ]
+        for subject in subjects
+    ]
+    return ButtonsPayload(buttons=rows).pack()
+
+
 def partner_type_keyboard() -> Attachment:
     """Inline-клавиатура выбора типа партнёра."""
     options = [
