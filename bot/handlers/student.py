@@ -191,7 +191,12 @@ async def on_password_input(event: MessageCreated, context):
 async def on_my_bonuses(event: MessageCallback):
     """Кнопка «Мои бонусы» в меню учащегося."""
     user_id = event.get_ids()[1] or 0
-    items = await bonuses.get_student_bonuses(user_id)
+    student = await auth.get_student(user_id)
+    if student is None:
+        await event.send(text=messages.UNKNOWN_COMMAND)
+        return
+
+    items = await bonuses.get_student_bonuses(student.id)
 
     if not items:
         await event.send(text=messages.MY_BONUSES_EMPTY)
@@ -204,5 +209,10 @@ async def on_my_bonuses(event: MessageCallback):
 async def on_my_progress(event: MessageCallback):
     """Кнопка «Мой прогресс» в меню учащегося."""
     user_id = event.get_ids()[1] or 0
-    result = await progress.get_student_progress(user_id)
+    student = await auth.get_student(user_id)
+    if student is None:
+        await event.send(text=messages.UNKNOWN_COMMAND)
+        return
+
+    result = await progress.get_student_progress(student.id)
     await event.send(text=messages.MY_PROGRESS_TEMPLATE.format(**result))
