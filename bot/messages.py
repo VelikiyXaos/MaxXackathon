@@ -28,6 +28,7 @@ INSTITUTION_NOT_FOUND = (
 )
 FIO_REQUEST = "Введите ваше ФИО (Фамилия Имя Отчество):"
 YEAR_REQUEST = "Введите год обучения (например, 2010):"
+YEAR_INVALID = "Введите год обучения числом, например 2010:"
 GROUP_REQUEST = "Введите вашу группу:"
 LOGIN_REQUEST = "Введите логин:"
 PASSWORD_REQUEST = "Введите пароль:"
