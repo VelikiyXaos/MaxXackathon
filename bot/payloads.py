@@ -23,10 +23,17 @@ class AgreementPayload(CallbackPayload):
 
 
 class CitySelectionPayload(CallbackPayload):
-    """Выбор города/региона из списка найденных."""
+    """Выбор города из списка найденных."""
 
     city_id: int
     city_name: str
+
+
+class SubjectSelectionPayload(CallbackPayload):
+    """Выбор региона (субъекта) из списка найденных."""
+
+    subject_id: int
+    subject_name: str
 
 
 class PartnerTypePayload(CallbackPayload):
