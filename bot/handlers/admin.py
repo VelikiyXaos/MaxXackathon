@@ -14,7 +14,7 @@ from bot.payloads import (
     ApplicationsPayload,
 )
 from bot.states import AdminAdding
-from services import applications
+from services import applications, auth
 
 router = Router(router_id="admin")
 
@@ -25,9 +25,19 @@ def _message_text(event: MessageCreated) -> str:
     return body.text.strip() if body and body.text else ""
 
 
+async def _is_admin(event: MessageCallback | MessageCreated) -> bool:
+    """Проверяет, что пользователь является администратором."""
+    admin = await auth.get_admin(event.get_ids()[1] or 0)
+    return admin is not None
+
+
 @router.message_callback(ApplicationsPayload.filter())
 async def on_applications(event: MessageCallback):
     """Кнопка «Список заявок» — показываем все заявки с кнопками решения."""
+    if not await _is_admin(event):
+        await event.send(text=messages.ACCESS_DENIED)
+        return
+
     items = await applications.get_applications()
 
     if not items:
@@ -54,6 +64,10 @@ async def on_application_decision(
     payload: ApplicationDecisionPayload,
 ):
     """Кнопки «Принять»/«Отклонить» по конкретной заявке."""
+    if not await _is_admin(event):
+        await event.send(text=messages.ACCESS_DENIED)
+        return
+
     if payload.decision == APPLICATION_ACCEPT:
         await applications.accept_application(payload.application_id)
         text = messages.APPLICATION_ACCEPTED.format(app_id=payload.application_id)
@@ -69,6 +83,10 @@ async def on_application_decision(
 @router.message_callback(AddAdminPayload.filter())
 async def on_add_admin(event: MessageCallback, context):
     """Кнопка «Добавить админа» — запрашиваем ID пользователя."""
+    if not await _is_admin(event):
+        await event.send(text=messages.ACCESS_DENIED)
+        return
+
     await context.set_state(AdminAdding.WAIT_USER_ID)
     await event.send(text=messages.ADD_ADMIN_ID_REQUEST)
 
@@ -76,6 +94,11 @@ async def on_add_admin(event: MessageCallback, context):
 @router.message_created(states=AdminAdding.WAIT_USER_ID)
 async def on_admin_id_input(event: MessageCreated, context):
     """Ввод ID пользователя — добавляем администратора."""
+    if not await _is_admin(event):
+        await context.clear()
+        await event.message.answer(text=messages.ACCESS_DENIED)
+        return
+
     text = _message_text(event)
     try:
         user_id = int(text)
