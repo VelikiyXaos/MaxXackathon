@@ -7,6 +7,7 @@ class StudentRegistration(StatesGroup):
     AGREEMENT = State()
     CITY = State()
     REGION = State()
+    CITY_CHOICE = State()
     INSTITUTION = State()
     FIO = State()
     YEAR = State()
