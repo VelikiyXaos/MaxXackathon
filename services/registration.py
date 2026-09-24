@@ -17,6 +17,7 @@ class SubjectCandidate:
     name: str
 
 
+@dataclass
 class CityCandidate:
     """Кандидат по поиску города/региона."""
 
