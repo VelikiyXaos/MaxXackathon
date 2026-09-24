@@ -70,6 +70,7 @@ BONUS_PROMO_REQUEST = "Введите промокод:"
 BONUS_ADDED = "Бонус успешно добавлен!"
 
 # Меню администратора
+ACCESS_DENIED = "Доступ запрещён. Вы не являетесь администратором."
 APPLICATIONS_EMPTY = "Список заявок пуст."
 APPLICATION_CARD_TEMPLATE = (
     "Заявка №{app_id}\n"
