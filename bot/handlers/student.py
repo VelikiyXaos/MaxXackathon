@@ -10,6 +10,8 @@ from bot.payloads import AgreementPayload, CitySelectionPayload, MyBonusesPayloa
 from bot.states import StudentRegistration
 from services import auth, bonuses, progress, registration
 
+import datetime
+
 router = Router(router_id="student")
 
 
@@ -82,11 +84,16 @@ async def on_fio_input(event: MessageCreated, context):
 @router.message_created(states=StudentRegistration.YEAR)
 async def on_year_input(event: MessageCreated, context):
     """Год принят — запрашиваем группу."""
-    text = _message_text(event)
+    year_text = _message_text(event)
     try:
-        year = int(text)
+        year = int(year_text)
     except ValueError:
-        year = 0  # TODO: добавить валидацию года.
+        year = 0 
+
+    if year < 2000 or year > datetime.now().year:
+        await event.message.answer (text=messages.YEAR_INVALID)
+        return
+    
     await context.update_data(year=year)
     await context.set_state(StudentRegistration.GROUP)
     await event.message.answer(text=messages.GROUP_REQUEST)
