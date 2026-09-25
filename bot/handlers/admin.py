@@ -103,7 +103,12 @@ async def on_admin_id_input(event: MessageCreated, context):
     try:
         user_id = int(text)
     except ValueError:
-        user_id = 0  # TODO: добавить валидацию ID пользователя.
+        await event.message.answer(text=messages.ADMIN_ID_INVALID)
+        return
+    
+    if user_id <= 0:
+        await event.message.answer(text=messages.ADMIN_ID_INVALID)
+        return
 
     ok = await applications.add_admin(user_id)
     await context.clear()
