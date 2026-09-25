@@ -169,17 +169,21 @@ async def on_password_input(event: MessageCreated, context):
     data = await context.get_data()
     await context.update_data(password=_message_text(event))
 
-    await registration.register_student(
-        max_id=event.get_ids()[1] or 0,
-        city_id=data.get("city_id", 0),
-        institution_id=data.get("institution_id", 0),
-        fio=data.get("fio", ""),
-        year=data.get("year", 0),
-        group=data.get("group", ""),
-        login=data.get("login", ""),
-        password=data.get("password", ""),
+    try:
+        await registration.register_student(
+            max_id=event.get_ids()[1] or 0,
+            city_id=data.get("city_id", 0),
+            institution_id=data.get("institution_id", 0),
+            fio=data.get("fio", ""),
+            year=data.get("year", 0),
+            group=data.get("group", ""),
+            login=data.get("login", ""),
+            password=data.get("password", ""),
         )
-
+    except registration.RegistrationError as e:
+        await event.message.answer(text=str(e))
+        return
+    
     await context.clear()
     await event.message.answer(
         text=messages.STUDENT_REGISTERED,
