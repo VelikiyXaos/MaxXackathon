@@ -11,6 +11,7 @@ async def get_applications() -> list[dict]:
     return [
         {
             "id": a.id,
+            "max_id": a.max_id,
             "type": a.type,
             "partner_name": a.partner_name,
             "description": a.description,
@@ -21,11 +22,7 @@ async def get_applications() -> list[dict]:
 
 
 async def accept_application(application_id: int) -> None:
-    """Принимает заявку: создаёт партнёра и удаляет заявку.
-
-    max_id для партнёра берётся из контактов, если там есть число,
-    иначе используется 0.
-    """
+    """Принимает заявку: создаёт партнёра и удаляет заявку."""
     from db.crud import partner as partner_crud
 
     async with session_scope() as session:
@@ -33,14 +30,8 @@ async def accept_application(application_id: int) -> None:
         if application is None:
             return
 
-        # Пытаемся извлечь max_id из контактов
-        max_id = 0
-        digits = "".join(ch for ch in application.contact_details if ch.isdigit())
-        if digits:
-            max_id = int(digits)
-
         await partner_crud.create(
-            session, name=application.partner_name, max_id=max_id
+            session, name=application.partner_name, max_id=application.max_id
         )
         await application_crud.delete(session, application_id)
 

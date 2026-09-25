@@ -9,6 +9,7 @@ from db.models import Application
 async def create(
     session: AsyncSession,
     *,
+    max_id: int,
     type: str,
     partner_name: str,
     description: str,
@@ -16,6 +17,7 @@ async def create(
 ) -> Application:
     """Создаёт новую заявку и возвращает её."""
     application = Application(
+        max_id=max_id,
         type=type,
         partner_name=partner_name,
         description=description,
