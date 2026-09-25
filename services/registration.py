@@ -146,6 +146,7 @@ async def submit_partner_application(
     async with session_scope() as session:
         await application_crud.create(
             session,
+            max_id=max_id,
             type=partner_type,
             partner_name=proposal[:255],
             description=proposal,
