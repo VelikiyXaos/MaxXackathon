@@ -87,4 +87,4 @@ async def on_back(event: MessageCallback, context):
     """Кнопка «Назад» — возвращаем главное меню по роли пользователя."""
     await context.clear()
     role = await auth.get_user_role(event.get_ids()[1] or 0)
-    await event.send(attachments=[role_keyboard(role)])
+    await event.send(text=messages.MAIN_MENU, attachments=[role_keyboard(role)])
