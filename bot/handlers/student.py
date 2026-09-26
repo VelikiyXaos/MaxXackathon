@@ -171,7 +171,7 @@ async def on_password_input(event: MessageCreated, context):
     await context.update_data(password=_message_text(event))
 
     try:
-        await registration.register_student(
+        student = await registration.register_student(
             max_id=event.get_ids()[1] or 0,
             city_id=data.get("city_id", 0),
             institution_id=data.get("institution_id", 0),
@@ -187,7 +187,9 @@ async def on_password_input(event: MessageCreated, context):
     
     await context.clear()
     await event.message.answer(
-        text=messages.STUDENT_REGISTERED,
+        text=messages.STUDENT_REGISTERED.format(
+            name=f"{student.surname} {student.name}"
+        ),
         attachments=[student_menu_keyboard()],
     )
 

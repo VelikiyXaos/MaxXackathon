@@ -18,10 +18,24 @@ def _message_text(event: MessageCreated) -> str:
 
 @router.message_callback(PartnerTypePayload.filter())
 async def on_partner_type(event: MessageCallback, payload: PartnerTypePayload, context):
-    """Тип партнёра выбран — запрашиваем текст предложения."""
+    """Тип партнёра выбран — запрашиваем название компании."""
     await context.update_data(partner_type=payload.value)
+    await context.set_state(PartnerRegistration.COMPANY)
+    await event.send(text=messages.PARTNER_COMPANY_REQUEST)
+
+
+@router.message_created(states=PartnerRegistration.COMPANY)
+async def on_company_input(event: MessageCreated, context):
+    """Название компании принято — запрашиваем текст предложения."""
+    company = _message_text(event)
+
+    if not company:
+        await event.message.answer(text=messages.PARTNER_COMPANY_EMPTY)
+        return
+
+    await context.update_data(company=company)
     await context.set_state(PartnerRegistration.PROPOSAL)
-    await event.send(text=messages.PARTNER_PROPOSAL_REQUEST)
+    await event.message.answer(text=messages.PARTNER_PROPOSAL_REQUEST)
 
 
 @router.message_created(states=PartnerRegistration.PROPOSAL)
@@ -36,17 +50,21 @@ async def on_proposal_input(event: MessageCreated, context):
 async def on_contacts_input(event: MessageCreated, context):
     """Контакты приняты — отправляем заявку партнёра."""
     data = await context.get_data()
+    company = data.get("company", "")
     await context.update_data(contacts=_message_text(event))
 
     await registration.submit_partner_application(
         max_id=event.get_ids()[1] or 0,
         partner_type=data.get("partner_type", ""),
+        partner_name=company,
         proposal=data.get("proposal", ""),
         contacts=data.get("contacts", ""),
     )
 
     await context.clear()
-    await event.message.answer(text=messages.PARTNER_APPLICATION_SENT)
+    await event.message.answer(
+        text=messages.PARTNER_APPLICATION_SENT.format(company=company)
+    )
 
 
 @router.message_callback(MyBonusesPayload.filter())

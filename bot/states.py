@@ -20,6 +20,7 @@ class PartnerRegistration(StatesGroup):
     """Состояния регистрации партнёра."""
 
     TYPE = State()
+    COMPANY = State()
     PROPOSAL = State()
     CONTACTS = State()
 

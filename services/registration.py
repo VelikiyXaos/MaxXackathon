@@ -6,6 +6,7 @@ from db.crud import city as city_crud
 from db.crud import educational_institution as ei_crud
 from db.crud import student as student_crud
 from db.crud import subject as subject_crud
+from db.models import Student
 from . import session_scope
 
 
@@ -83,8 +84,8 @@ async def register_student(
     group: str,
     login: str,
     password: str,
-) -> None:
-    """Регистрирует учащегося.
+) -> Student:
+    """Регистрирует учащегося и возвращает созданную запись.
     """
     fio_parts = fio.strip().split()
     if len(fio_parts) < 2:
@@ -119,7 +120,7 @@ async def register_student(
             )
 
         # Создание ученика
-        await student_crud.create(
+        return await student_crud.create(
             session,
             name=name,
             surname=surname,
@@ -137,6 +138,7 @@ async def submit_partner_application(
     *,
     max_id: int,
     partner_type: str,
+    partner_name: str,
     proposal: str,
     contacts: str,
 ) -> None:
@@ -148,7 +150,7 @@ async def submit_partner_application(
             session,
             max_id=max_id,
             type=partner_type,
-            partner_name=proposal[:255],
+            partner_name=partner_name,
             description=proposal,
             contact_details=contacts,
         )
