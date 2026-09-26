@@ -5,9 +5,9 @@ from maxapi.types import BotStarted, MessageCallback, MessageCreated
 from bot import messages
 from bot.keyboards import (
     agreement_attachments,
+    home_keyboard,
     partner_type_keyboard,
     role_keyboard,
-    with_home_row,
 )
 from bot.payloads import (
     ROLE_ADMIN,
@@ -36,26 +36,21 @@ def _welcome_text(profile: auth.UserProfile) -> str:
     return messages.START_AUTHORIZED.format(name=profile.display_name)
 
 
-async def _role_entry(
-    user_id: int, *, with_home: bool = False
-) -> tuple[str, object]:
+async def _role_entry(user_id: int) -> tuple[str, object]:
     """Возвращает приветствие и клавиатуру для роли.
 
-    with_home — добавить ряд с кнопкой /start. Нужен только при
-    открытии бота и в ответе на команду /start.
+    Кнопка /start живёт в главном меню роли, а не в приветствии:
+    на стартовом экране она ещё не нужна.
     """
     profile = await auth.get_user_profile(user_id)
-    keyboard = role_keyboard(profile.role)
-    if with_home:
-        keyboard = with_home_row(keyboard)
-    return _welcome_text(profile), keyboard
+    return _welcome_text(profile), role_keyboard(profile.role)
 
 
 @router.bot_started()
 async def bot_started(event: BotStarted, context):
     """Срабатывает при первом открытии бота (reply-кнопка «Начать»)."""
     await context.clear()
-    text, keyboard = await _role_entry(event.user.user_id, with_home=True)
+    text, keyboard = await _role_entry(event.user.user_id)
     await event.send(text=text, attachments=[keyboard])
 
 
@@ -66,8 +61,23 @@ async def start_command(event: MessageCreated, context):
     Повторный /start очищает незавершённую регистрацию и начинает заново.
     """
     await context.clear()
-    text, keyboard = await _role_entry(event.get_ids()[1] or 0, with_home=True)
+    text, keyboard = await _role_entry(event.get_ids()[1] or 0)
     await event.message.answer(text=text, attachments=[keyboard])
+
+
+@router.message_created(None)
+async def on_unknown_message(event: MessageCreated):
+    """Текст вне сценария — подсказка с кнопкой /start.
+
+    None в фильтре состояний означает «состояние не задано», поэтому
+    хендлер не перехватывает шаги регистрации: у них состояние задано.
+    Зарегистрирован после start_command, чтобы /start обрабатывался
+    как команда, а не как незнакомый текст.
+    """
+    await event.message.answer(
+        text=messages.UNKNOWN_COMMAND,
+        attachments=[home_keyboard()],
+    )
 
 
 @router.message_callback(RolePayload.filter())
