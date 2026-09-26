@@ -51,14 +51,15 @@ async def on_contacts_input(event: MessageCreated, context):
     """Контакты приняты — отправляем заявку партнёра."""
     data = await context.get_data()
     company = data.get("company", "")
-    await context.update_data(contacts=_message_text(event))
+    contacts = _message_text(event)
+    await context.update_data(contacts=contacts)
 
     await registration.submit_partner_application(
         max_id=event.get_ids()[1] or 0,
         partner_type=data.get("partner_type", ""),
         partner_name=company,
         proposal=data.get("proposal", ""),
-        contacts=data.get("contacts", ""),
+        contacts=contacts,
     )
 
     await context.clear()
