@@ -16,10 +16,7 @@ BOT_COMMANDS = (
 
 
 async def setup_commands(bot: Bot) -> None:
-    """Публикует список команд бота (PATCH /me/commands).
-
-    Без этого MAX не показывает подсказки команд при вводе «/».
-    """
+    """Публикует список команд."""
     try:
         result = await bot.set_commands(*BOT_COMMANDS)
     except Exception as exc:
