@@ -160,7 +160,6 @@ def student_menu_keyboard() -> Attachment:
                     buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -179,7 +178,6 @@ def commercial_partner_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_BONUS, payloads.AddBonusPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -198,7 +196,6 @@ def admin_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_ADMIN, payloads.AddAdminPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -241,11 +238,7 @@ def back_keyboard() -> Attachment:
 
 
 def role_keyboard(role: str | None) -> Attachment:
-    """Клавиатура главного меню для роли (выбор роли, если роль None).
-
-    Меню каждой роли уже содержит ряд с /start, а клавиатура выбора
-    роли — нет: незарегистрированному пользователю команда не нужна.
-    """
+    """Клавиатура главного меню для роли (выбор роли, если роль None)."""
     if role == payloads.ROLE_ADMIN:
         return admin_menu_keyboard()
     if role == payloads.ROLE_STUDENT:
