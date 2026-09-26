@@ -3,6 +3,7 @@ import logging
 
 from maxapi import Bot, Dispatcher
 
+from bot.commands import setup_commands
 from bot.config import BOT_TOKEN
 from bot.handlers import (
     admin_router,
@@ -40,6 +41,7 @@ def create_bot() -> tuple[Bot, Dispatcher]:
 
 async def main() -> None:
     bot, dp = create_bot()
+    await setup_commands(bot)
     logger.info("Запуск бота...")
     await dp.start_polling(bot)
 
