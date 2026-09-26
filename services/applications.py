@@ -4,6 +4,15 @@ from db.crud import admin as admin_crud
 from db.crud import application as application_crud
 from . import session_scope
 
+
+class AdminAddingError(Exception):
+    """Пользователь уже является администратором."""
+
+    def __init__(self, max_id: int) -> None:
+        super().__init__(max_id)
+        self.max_id = max_id
+
+
 async def get_applications() -> list[dict]:
     """Возвращает список всех заявок партнёров."""
     async with session_scope() as session:
@@ -42,11 +51,13 @@ async def reject_application(application_id: int) -> None:
         await application_crud.delete(session, application_id)
 
 
-async def add_admin(max_id: int) -> bool:
-    """Добавляет администратора. False, если уже существует."""
+async def add_admin(max_id: int) -> None:
+    """Добавляет администратора.
+
+    Raises:
+        AdminAddingError: если пользователь уже является администратором.
+    """
     async with session_scope() as session:
-        existing = await admin_crud.get_by_max_id(session, max_id)
-        if existing is not None:
-            return False
+        if await admin_crud.get_by_max_id(session, max_id) is not None:
+            raise AdminAddingError(max_id)
         await admin_crud.create(session, max_id=max_id)
-        return True
