@@ -1,10 +1,28 @@
-from maxapi.types import Attachment, ButtonsPayload, CallbackButton
+from maxapi.types import (
+    Attachment,
+    ButtonsPayload,
+    CallbackButton,
+    MessageButton,
+)
 
 from bot import buttons, payloads
 
 
 def _callback_button(text: str, payload: payloads.CallbackPayload) -> CallbackButton:
     return CallbackButton(text=text, payload=payload.pack())
+
+
+def _message_button(text: str) -> MessageButton:
+    return MessageButton(text=text)
+
+
+def _home_row() -> list[MessageButton]:
+    """Ряд с кнопкой, отправляющей команду /start.
+
+    Нажатие MessageButton присылает боту обычное сообщение "/start",
+    поэтому срабатывает существующий хендлер команды /start.
+    """
+    return [_message_button(buttons.BTN_START_COMMAND)]
 
 
 def role_selection_keyboard() -> Attachment:
@@ -106,6 +124,7 @@ def student_menu_keyboard() -> Attachment:
                     buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
@@ -124,6 +143,7 @@ def commercial_partner_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_BONUS, payloads.AddBonusPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
@@ -142,6 +162,7 @@ def admin_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_ADMIN, payloads.AddAdminPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
