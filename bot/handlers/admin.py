@@ -1,3 +1,5 @@
+import logging
+
 from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
@@ -18,6 +20,8 @@ from bot.states import AdminAdding
 from services import applications, auth
 
 router = Router(router_id="admin")
+
+logger = logging.getLogger(__name__)
 
 
 def _message_text(event: MessageCreated) -> str:
@@ -111,16 +115,29 @@ async def on_admin_id_input(event: MessageCreated, context):
         await event.message.answer(text=messages.ADMIN_ID_INVALID)
         return
 
-    ok = await applications.add_admin(user_id)
-    await context.clear()
-
-    if ok:
+    try:
+        await applications.add_admin(user_id)
+    except applications.AdminAddingError as e:
         await event.message.answer(
-            text=messages.ADMIN_ADDED.format(user_id=user_id),
-            attachments=[admin_menu_keyboard()],
+            text=messages.ADMIN_ALREADY_EXISTS.format(user_id=e.max_id),
+            attachments=[back_keyboard()],
         )
-    else:
+        return
+    except Exception as exc:
+        logger.error(
+            "Не удалось добавить администратора %s: %s",
+            user_id,
+            exc,
+            exc_info=exc,
+        )
         await event.message.answer(
             text=messages.ADMIN_NOT_ADDED,
             attachments=[back_keyboard()],
         )
+        return
+
+    await context.clear()
+    await event.message.answer(
+        text=messages.ADMIN_ADDED.format(user_id=user_id),
+        attachments=[admin_menu_keyboard()],
+    )
