@@ -4,7 +4,7 @@ from maxapi.types import BotStarted, MessageCallback, MessageCreated
 
 from bot import messages
 from bot.keyboards import (
-    agreement_keyboard,
+    agreement_attachments,
     partner_type_keyboard,
     role_keyboard,
 )
@@ -72,7 +72,7 @@ async def on_role_selection(event: MessageCallback, payload: RolePayload, contex
         await context.set_state(StudentRegistration.AGREEMENT)
         await event.send(
             text=messages.STUDENT_AGREEMENT,
-            attachments=[agreement_keyboard()],
+            attachments=agreement_attachments(),
         )
     elif payload.value == ROLE_PARTNER:
         await context.set_state(PartnerRegistration.TYPE)

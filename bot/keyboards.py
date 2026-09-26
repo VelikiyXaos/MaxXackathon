@@ -1,11 +1,20 @@
+import logging
+from pathlib import Path
+
 from maxapi.types import (
     Attachment,
     ButtonsPayload,
     CallbackButton,
+    InputMedia,
     MessageButton,
 )
 
 from bot import buttons, payloads
+
+logger = logging.getLogger(__name__)
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+AGREEMENT_FILE = ASSETS_DIR / "Пользовательское соглашение.pdf"
 
 
 def _callback_button(text: str, payload: payloads.CallbackPayload) -> CallbackButton:
@@ -57,6 +66,24 @@ def agreement_keyboard() -> Attachment:
             ],
         ]
     ).pack()
+
+
+def agreement_attachments() -> list[Attachment]:
+    """Файл соглашения и кнопка принятия — в одном сообщении.
+
+    Если файл согласия отсутствует, отправляем только кнопку, чтобы
+    регистрация не прерывалась из-за ошибки чтения файла.
+    """
+    attachments: list[Attachment] = []
+    if AGREEMENT_FILE.is_file():
+        attachments.append(InputMedia(path=str(AGREEMENT_FILE)))
+    else:
+        logger.warning(
+            "Файл согласия не найден: %s — отправляю только кнопку",
+            AGREEMENT_FILE,
+        )
+    attachments.append(agreement_keyboard())
+    return attachments
 
 
 def city_selection_keyboard(cities: list) -> Attachment:
