@@ -5,6 +5,7 @@ from bot import messages
 from bot.keyboards import (
     admin_menu_keyboard,
     application_decision_keyboard,
+    back_keyboard,
 )
 from bot.payloads import (
     APPLICATION_ACCEPT,
@@ -77,7 +78,7 @@ async def on_application_decision(
     else:
         text = messages.UNKNOWN_COMMAND
 
-    await event.send(text=text)
+    await event.send(text=text, attachments=[back_keyboard()])
 
 
 @router.message_callback(AddAdminPayload.filter())
@@ -119,4 +120,7 @@ async def on_admin_id_input(event: MessageCreated, context):
             attachments=[admin_menu_keyboard()],
         )
     else:
-        await event.message.answer(text=messages.ADMIN_NOT_ADDED)
+        await event.message.answer(
+            text=messages.ADMIN_NOT_ADDED,
+            attachments=[back_keyboard()],
+        )

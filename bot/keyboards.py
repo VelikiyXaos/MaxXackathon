@@ -189,3 +189,27 @@ def application_decision_keyboard(application_id: int) -> Attachment:
             ],
         ]
     ).pack()
+
+
+def back_keyboard() -> Attachment:
+    """Клавиатура с единственной кнопкой возврата в главное меню."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_BACK, payloads.BackPayload()
+                )
+            ],
+        ]
+    ).pack()
+
+
+def role_keyboard(role: str | None) -> Attachment:
+    """Клавиатура главного меню для роли (выбор роли, если роль None)."""
+    if role == payloads.ROLE_ADMIN:
+        return admin_menu_keyboard()
+    if role == payloads.ROLE_STUDENT:
+        return student_menu_keyboard()
+    if role == payloads.ROLE_PARTNER:
+        return commercial_partner_menu_keyboard()
+    return role_selection_keyboard()

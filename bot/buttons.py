@@ -27,3 +27,6 @@ BTN_ADD_ADMIN = "👑 Добавить администратора"
 # Заявки
 BTN_APPLICATION_ACCEPT = "✅ Принять"
 BTN_APPLICATION_REJECT = "❌ Отклонить"
+
+# Навигация
+BTN_BACK = "↩️ Назад"
