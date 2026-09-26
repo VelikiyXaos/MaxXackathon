@@ -58,7 +58,8 @@ async def on_bonus_deadline(event: MessageCreated, context):
 async def on_bonus_promo(event: MessageCreated, context):
     """Промокод принят — сохраняем бонус и возвращаемся в меню."""
     data = await context.get_data()
-    await context.update_data(bonus_promo=_message_text(event))
+    promo = _message_text(event)
+    await context.update_data(bonus_promo=promo)
 
     partner = await auth.get_partner(event.get_ids()[1] or 0)
     if partner is None:
@@ -71,7 +72,7 @@ async def on_bonus_promo(event: MessageCreated, context):
         name=data.get("bonus_name", ""),
         condition=data.get("bonus_condition", ""),
         deadline=data.get("bonus_deadline", ""),
-        promocode=data.get("bonus_promo", ""),
+        promocode=promo,
     )
 
     await context.clear()

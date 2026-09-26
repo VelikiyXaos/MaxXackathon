@@ -168,7 +168,8 @@ async def on_login_input(event: MessageCreated, context):
 async def on_password_input(event: MessageCreated, context):
     """Пароль принят — завершаем регистрацию и показываем меню учащегося."""
     data = await context.get_data()
-    await context.update_data(password=_message_text(event))
+    password = _message_text(event)
+    await context.update_data(password=password)
 
     try:
         student = await registration.register_student(
@@ -179,7 +180,7 @@ async def on_password_input(event: MessageCreated, context):
             year=data.get("year", 0),
             group=data.get("group", ""),
             login=data.get("login", ""),
-            password=data.get("password", ""),
+            password=password,
         )
     except registration.RegistrationError as e:
         await event.message.answer(text=str(e))
