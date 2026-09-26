@@ -151,7 +151,6 @@ def student_menu_keyboard() -> Attachment:
                     buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -170,7 +169,6 @@ def commercial_partner_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_BONUS, payloads.AddBonusPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -189,7 +187,6 @@ def admin_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_ADMIN, payloads.AddAdminPayload()
                 )
             ],
-            _home_row(),
         ]
     ).pack()
 
@@ -240,3 +237,15 @@ def role_keyboard(role: str | None) -> Attachment:
     if role == payloads.ROLE_PARTNER:
         return commercial_partner_menu_keyboard()
     return role_selection_keyboard()
+
+
+def with_home_row(keyboard: Attachment) -> Attachment:
+    """Дополняет готовую клавиатуру рядом с кнопкой /start.
+
+    Нужна только для первого экрана и для ответа на команду /start:
+    дальше пользователь возвращается в меню кнопкой «Назад».
+    """
+    payload = keyboard.payload
+    if not isinstance(payload, ButtonsPayload):
+        return keyboard
+    return ButtonsPayload(buttons=[*payload.buttons, _home_row()]).pack()

@@ -7,6 +7,7 @@ from bot.keyboards import (
     agreement_attachments,
     partner_type_keyboard,
     role_keyboard,
+    with_home_row,
 )
 from bot.payloads import (
     ROLE_ADMIN,
@@ -35,17 +36,26 @@ def _welcome_text(profile: auth.UserProfile) -> str:
     return messages.START_AUTHORIZED.format(name=profile.display_name)
 
 
-async def _role_entry(user_id: int) -> tuple[str, object]:
-    """Возвращает приветствие и клавиатуру для авторизованной роли."""
+async def _role_entry(
+    user_id: int, *, with_home: bool = False
+) -> tuple[str, object]:
+    """Возвращает приветствие и клавиатуру для роли.
+
+    with_home — добавить ряд с кнопкой /start. Нужен только при
+    открытии бота и в ответе на команду /start.
+    """
     profile = await auth.get_user_profile(user_id)
-    return _welcome_text(profile), role_keyboard(profile.role)
+    keyboard = role_keyboard(profile.role)
+    if with_home:
+        keyboard = with_home_row(keyboard)
+    return _welcome_text(profile), keyboard
 
 
 @router.bot_started()
 async def bot_started(event: BotStarted, context):
     """Срабатывает при первом открытии бота (reply-кнопка «Начать»)."""
     await context.clear()
-    text, keyboard = await _role_entry(event.user.user_id)
+    text, keyboard = await _role_entry(event.user.user_id, with_home=True)
     await event.send(text=text, attachments=[keyboard])
 
 
@@ -56,7 +66,7 @@ async def start_command(event: MessageCreated, context):
     Повторный /start очищает незавершённую регистрацию и начинает заново.
     """
     await context.clear()
-    text, keyboard = await _role_entry(event.get_ids()[1] or 0)
+    text, keyboard = await _role_entry(event.get_ids()[1] or 0, with_home=True)
     await event.message.answer(text=text, attachments=[keyboard])
 
 
