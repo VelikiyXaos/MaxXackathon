@@ -4,17 +4,15 @@ from maxapi.types import BotStarted, MessageCallback, MessageCreated
 
 from bot import messages
 from bot.keyboards import (
-    admin_menu_keyboard,
     agreement_keyboard,
-    commercial_partner_menu_keyboard,
     partner_type_keyboard,
-    role_selection_keyboard,
-    student_menu_keyboard,
+    role_keyboard,
 )
 from bot.payloads import (
     ROLE_ADMIN,
     ROLE_PARTNER,
     ROLE_STUDENT,
+    BackPayload,
     RolePayload,
 )
 from bot.states import PartnerRegistration, StudentRegistration
@@ -22,19 +20,19 @@ from services import auth
 
 router = Router(router_id="start")
 
+_ROLE_TEXTS = {
+    ROLE_ADMIN: messages.START_AUTHORIZED_ADMIN,
+    ROLE_STUDENT: messages.START_AUTHORIZED_STUDENT,
+    ROLE_PARTNER: messages.START_AUTHORIZED_PARTNER,
+}
+
 
 def _role_entry(role: str | None) -> tuple[str, object]:
     """Возвращает приветствие и клавиатуру для авторизованной роли.
 
     Если роль None — предложить выбор роли (регистрация).
     """
-    if role == ROLE_ADMIN:
-        return messages.START_AUTHORIZED_ADMIN, admin_menu_keyboard()
-    if role == ROLE_STUDENT:
-        return messages.START_AUTHORIZED_STUDENT, student_menu_keyboard()
-    if role == ROLE_PARTNER:
-        return messages.START_AUTHORIZED_PARTNER, commercial_partner_menu_keyboard()
-    return messages.START_NOT_AUTHORIZED, role_selection_keyboard()
+    return _ROLE_TEXTS.get(role, messages.START_NOT_AUTHORIZED), role_keyboard(role)
 
 
 @router.bot_started()
@@ -82,3 +80,11 @@ async def on_role_selection(event: MessageCallback, payload: RolePayload, contex
             text=messages.PARTNER_TYPE_REQUEST,
             attachments=[partner_type_keyboard()],
         )
+
+
+@router.message_callback(BackPayload.filter())
+async def on_back(event: MessageCallback, context):
+    """Кнопка «Назад» — возвращаем главное меню по роли пользователя."""
+    await context.clear()
+    role = await auth.get_user_role(event.get_ids()[1] or 0)
+    await event.send(attachments=[role_keyboard(role)])

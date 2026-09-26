@@ -2,6 +2,7 @@ from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
+from bot.keyboards import back_keyboard
 from bot.payloads import AddBonusPayload, MyBonusesPayload, PartnerTypePayload
 from bot.states import BonusAdding, PartnerRegistration
 from services import auth, bonuses, registration
@@ -60,13 +61,17 @@ async def on_my_bonuses(event: MessageCallback):
     items = await bonuses.get_partner_bonuses(partner.id)
 
     if not items:
-        await event.send(text=messages.PARTNER_BONUSES_EMPTY)
+        await event.send(
+            text=messages.PARTNER_BONUSES_EMPTY,
+            attachments=[back_keyboard()],
+        )
     else:
         lines = [f"• {item}" for item in items]
         await event.send(
             text=messages.PARTNER_BONUSES_TEMPLATE.format(
                 bonuses="\n".join(lines)
-            )
+            ),
+            attachments=[back_keyboard()],
         )
 
 

@@ -3,6 +3,7 @@ from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
 from bot.keyboards import (
+    back_keyboard,
     city_selection_keyboard,
     student_menu_keyboard,
     subject_selection_keyboard,
@@ -203,10 +204,18 @@ async def on_my_bonuses(event: MessageCallback):
     items = await bonuses.get_student_bonuses(student.id)
 
     if not items:
-        await event.send(text=messages.MY_BONUSES_EMPTY)
+        await event.send(
+            text=messages.MY_BONUSES_EMPTY,
+            attachments=[back_keyboard()],
+        )
     else:
         lines = [f"• {item}" for item in items]
-        await event.send(text=messages.MY_BONUSES_TEMPLATE.format(bonuses="\n".join(lines)))
+        await event.send(
+            text=messages.MY_BONUSES_TEMPLATE.format(
+                bonuses="\n".join(lines)
+            ),
+            attachments=[back_keyboard()],
+        )
 
 
 @router.message_callback(MyProgressPayload.filter())
@@ -219,4 +228,7 @@ async def on_my_progress(event: MessageCallback):
         return
 
     result = await progress.get_student_progress(student.id)
-    await event.send(text=messages.MY_PROGRESS_TEMPLATE.format(**result))
+    await event.send(
+        text=messages.MY_PROGRESS_TEMPLATE.format(**result),
+        attachments=[back_keyboard()],
+    )

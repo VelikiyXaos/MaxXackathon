@@ -67,3 +67,7 @@ class ApplicationDecisionPayload(CallbackPayload):
 
     application_id: int
     decision: str
+
+
+class BackPayload(CallbackPayload):
+    """Кнопка «Назад» — возврат в главное меню."""
