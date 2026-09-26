@@ -34,6 +34,15 @@ def _home_row() -> list[MessageButton]:
     return [_message_button(buttons.BTN_START_COMMAND)]
 
 
+def home_keyboard() -> Attachment:
+    """Клавиатура с единственной кнопкой /start.
+
+    Нужна, когда бот зовёт пользователя к /start: один тап вместо
+    ручного набора команды.
+    """
+    return ButtonsPayload(buttons=[_home_row()]).pack()
+
+
 def role_selection_keyboard() -> Attachment:
     """Inline-клавиатура выбора роли: учащийся / партнёр."""
     return ButtonsPayload(
@@ -151,6 +160,7 @@ def student_menu_keyboard() -> Attachment:
                     buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
@@ -169,6 +179,7 @@ def commercial_partner_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_BONUS, payloads.AddBonusPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
@@ -187,6 +198,7 @@ def admin_menu_keyboard() -> Attachment:
                     buttons.BTN_ADD_ADMIN, payloads.AddAdminPayload()
                 )
             ],
+            _home_row(),
         ]
     ).pack()
 
@@ -229,7 +241,11 @@ def back_keyboard() -> Attachment:
 
 
 def role_keyboard(role: str | None) -> Attachment:
-    """Клавиатура главного меню для роли (выбор роли, если роль None)."""
+    """Клавиатура главного меню для роли (выбор роли, если роль None).
+
+    Меню каждой роли уже содержит ряд с /start, а клавиатура выбора
+    роли — нет: незарегистрированному пользователю команда не нужна.
+    """
     if role == payloads.ROLE_ADMIN:
         return admin_menu_keyboard()
     if role == payloads.ROLE_STUDENT:
@@ -237,15 +253,3 @@ def role_keyboard(role: str | None) -> Attachment:
     if role == payloads.ROLE_PARTNER:
         return commercial_partner_menu_keyboard()
     return role_selection_keyboard()
-
-
-def with_home_row(keyboard: Attachment) -> Attachment:
-    """Дополняет готовую клавиатуру рядом с кнопкой /start.
-
-    Нужна только для первого экрана и для ответа на команду /start:
-    дальше пользователь возвращается в меню кнопкой «Назад».
-    """
-    payload = keyboard.payload
-    if not isinstance(payload, ButtonsPayload):
-        return keyboard
-    return ButtonsPayload(buttons=[*payload.buttons, _home_row()]).pack()
