@@ -65,7 +65,11 @@ PARTNER_BONUSES_TEMPLATE = "Ваши бонусы:\n{bonuses}"
 # Добавление бонуса
 BONUS_NAME_REQUEST = "Введите название бонуса:"
 BONUS_CONDITION_REQUEST = "Введите условие получения бонуса:"
-BONUS_DEADLINE_REQUEST = "Введите срок действия бонуса:"
+BONUS_DEADLINE_REQUEST = "Введите дату, до которой действует бонус (ДД.ММ.ГГГГ):"
+BONUS_DEADLINE_INVALID = (
+    "Не удалось распознать дату. Введите дату в формате ДД.ММ.ГГГГ, "
+    "например 31.12.2026:"
+)
 BONUS_PROMO_REQUEST = "Введите промокод:"
 BONUS_ADDED = "Бонус успешно добавлен!"
 
