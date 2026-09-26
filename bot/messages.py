@@ -9,6 +9,7 @@ START_AUTHORIZED_PARTNER = "Добро пожаловать! Вы авториз
 START_AUTHORIZED_ADMIN = "Добро пожаловать! Вы авторизованы как администратор."
 ROLE_SELECTION_PROMPT = "Выберите роль:"
 UNKNOWN_COMMAND = "Я вас не понимаю. Нажмите /start, чтобы начать заново."
+MAIN_MENU = "Главное меню:"
 
 # Регистрация учащегося
 STUDENT_AGREEMENT = (
