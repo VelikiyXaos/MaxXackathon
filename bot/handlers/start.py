@@ -39,8 +39,8 @@ def _welcome_text(profile: auth.UserProfile) -> str:
 async def _role_entry(user_id: int) -> tuple[str, object]:
     """Возвращает приветствие и клавиатуру для роли.
 
-    Кнопка /start живёт в главном меню роли, а не в приветствии:
-    на стартовом экране она ещё не нужна.
+    Кнопка /start не показывается ни в приветствии, ни в главном
+    меню: её предлагает только подсказка для невнятного ввода.
     """
     profile = await auth.get_user_profile(user_id)
     return _welcome_text(profile), role_keyboard(profile.role)
