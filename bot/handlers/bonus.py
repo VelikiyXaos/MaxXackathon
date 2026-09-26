@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
@@ -34,7 +36,20 @@ async def on_bonus_condition(event: MessageCreated, context):
 @router.message_created(states=BonusAdding.DEADLINE)
 async def on_bonus_deadline(event: MessageCreated, context):
     """Срок принят — запрашиваем промокод."""
-    await context.update_data(bonus_deadline=_message_text(event))
+    raw = _message_text(event)
+    end_date = None
+    for fmt in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            end_date = datetime.strptime(raw, fmt).date()
+            break
+        except ValueError:
+            continue
+
+    if end_date is None:
+        await event.message.answer(text=messages.BONUS_DEADLINE_INVALID)
+        return
+
+    await context.update_data(bonus_deadline=end_date)
     await context.set_state(BonusAdding.PROMO)
     await event.message.answer(text=messages.BONUS_PROMO_REQUEST)
 
