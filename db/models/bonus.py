@@ -19,5 +19,9 @@ class Bonus(Base):
 
     partner: Mapped["Partner"] = relationship(back_populates="bonuses")
     students: Mapped[list["Student"]] = relationship(
-        secondary="student_bonus", back_populates="bonuses"
+        secondary="student_bonus",
+        back_populates="bonuses",
+        # связи student_bonus удаляет сама БД (FK ... ON DELETE CASCADE),
+        # SQLAlchemy не должен их трогать при удалении бонуса
+        passive_deletes=True,
     )

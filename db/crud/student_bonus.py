@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.associations import student_bonus
@@ -62,3 +62,18 @@ async def get_student_ids_for_bonus(
         )
     )
     return list(result.scalars())
+
+
+async def count_students_for_bonus(session: AsyncSession, bonus_id: int) -> int:
+    """Возвращает количество учеников, получивших бонус.
+
+    Нужен, чтобы узнать размер каскадного удаления связей: после
+    `DELETE FROM bonus` (FK ... ON DELETE CASCADE) сами строки
+    `student_bonus` уже недоступны для подсчёта.
+    """
+    result = await session.execute(
+        select(func.count())
+        .select_from(student_bonus)
+        .where(student_bonus.c.bonus_id == bonus_id)
+    )
+    return result.scalar_one()
