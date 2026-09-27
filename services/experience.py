@@ -27,9 +27,9 @@ async def calculate_and_save_school_experience(student_id: int, grades: dict[int
     xp_per_grade = {
         5: 50,
         4: 30,
-        3: 10,
-        2: -20,
-        1: 0,
+        3: 0,
+        2: -30,
+        1: -50,
     }
 
     total_xp = sum(count * xp_per_grade.get(grade, 0) for grade, count in grades.items())
