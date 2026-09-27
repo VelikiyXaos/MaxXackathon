@@ -1,70 +1,39 @@
-"""Подбор провайдера оценок ЭСУО для студента.
+"""Подбор коннектора ЭСУО для студента.
 
-`EGAS.API_file` — название класса-обработчика для конкретной ЭСУО (ЕГАС).
-Классы-обработчики регистрируются в `_HANDLER_REGISTRY` ниже; по мере
-появления новых ЭСУО реестр пополняется.
+Фабрика не знает ни про одну конкретную ЭСУО: по `EGAS.API_file` она
+находит класс в реестре (`connection.registry`) и создаёт его с кредами
+студента. Добавление новой ЭСУО не требует правок этого файла.
 """
 
 from __future__ import annotations
 
-from connection.ABS_grade_provider import AbstractGradeProvider
-from connection.egas_client import NetSchoolClient
-from connection.grade_provider_NetSchoolAPI import EgasGradeProvider
+from connection.ABS_egas_connector import AbstractEgasConnector
+from connection.registry import get_connector_class
 from db.crud import egas as egas_crud
 from db.crud import ei_with_egas as ei_with_egas_crud
 from db.crud import student as student_crud
 from services import session_scope
 
-# Реестр обработчиков ЭСУО: имя класса (EGAS.API_file) → класс клиента.
-_HANDLER_REGISTRY: dict[str, type] = {
-    "NetSchoolClient": NetSchoolClient,
-}
 
-
-def get_egas_handler(name: str) -> type:
+async def get_egas_connector(student_id: int) -> AbstractEgasConnector:
     """
-    Возвращает класс-обработчик ЭСУО по имени (EGAS.API_file).
-
-    Args:
-        name: Имя класса-обработчика, например "NetSchoolClient".
-
-    Raises:
-        ValueError: обработчик с таким именем не зарегистрирован.
-    """
-    handler = _HANDLER_REGISTRY.get(name)
-    if handler is None:
-        raise ValueError(
-            f"Обработчик ЭСУО '{name}' не зарегистрирован в "
-            f"connection.factory._HANDLER_REGISTRY "
-            f"(доступные: {sorted(_HANDLER_REGISTRY)})"
-        )
-    return handler
-
-
-async def get_grade_provider(student_id: int) -> AbstractGradeProvider:
-    """
-    Возвращает провайдер оценок для указанного студента.
+    Возвращает готовый к опросу коннектор ЭСУО для студента.
 
     Логика (по схеме БД):
-        1. Найти студента (db.crud.student.get) → его EI_id,
-           login, password.
-        2. Найти ЭГАС учреждения
-           (db.crud.ei_with_egas.get_egas_ids_for_institution) —
-           у учреждения ровно одна ЭГАС, поэтому берём единственную.
-        3. Взять EGAS.API_file (db.crud.egas.get) — имя класса
-           обработчика этой ЭСУО.
-        4. Найти класс в реестре (get_egas_handler), создать клиент
-           с кредами студента и обернуть в EgasGradeProvider.
+        1. Найти студента → его EI_id, login, password.
+        2. Найти ЭГАС учреждения (у учреждения ровно одна ЭГАС).
+        3. Взять `EGAS.API_file` — имя класса коннектора этой ЭСУО.
+        4. Создать коннектор из реестра с кредами студента.
 
     Args:
         student_id: ID студента в БД бота.
 
     Returns:
-        Готовый к опросу провайдер оценок.
+        Коннектор, готовый к `get_grades_count(...)`.
 
     Raises:
         ValueError: студент не найден, у учреждения не подключена ЭГАС
-            или обработчик ЭСУО не зарегистрирован.
+            или коннектор этой ЭСУО не зарегистрирован.
     """
     async with session_scope() as session:
         student = await student_crud.get(session, student_id)
@@ -83,7 +52,5 @@ async def get_grade_provider(student_id: int) -> AbstractGradeProvider:
         if egas is None:
             raise ValueError(f"ЭСУО (ЕГАС) с id {egas_ids[0]} не найдена")
 
-        handler_cls = get_egas_handler(egas.API_file)
-        client = handler_cls(login=student.login, password=student.password)
-
-    return EgasGradeProvider(client=client)
+        connector_cls = get_connector_class(egas.API_file)
+        return connector_cls(login=student.login, password=student.password)

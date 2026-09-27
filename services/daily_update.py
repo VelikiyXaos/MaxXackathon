@@ -1,19 +1,18 @@
 """Ежедневный опрос ЭСУО и обновление баллов/бонусов в 00:00.
 
 Порядок работы (по ТЗ):
-    1. Опрос всех студентов в ЭСУО на обновление оценок → начисление опыта.
-    2. Проверка всех существующих бонусов на истечение срока действия.
+    1. Проверка всех существующих бонусов на истечение срока действия:
+       истёкшие удаляются из таблицы бонусов и из связи со студентами
+       (каскадом на уровне БД).
+    2. Опрос всех студентов в ЭСУО на обновление оценок → начисление опыта.
     3. После обновления баллов — обновление информации о доступных
        студенту бонусах.
 
 Использует функции из веток:
-    * EGAS_connector — connection.ABS_grade_provider.AbstractGradeProvider,
-      connection.grade_provider_NetSchoolAPI.EgasGradeProvider;
+    * EGAS_connector — connection.ABS_egas_connector.AbstractEgasConnector,
+      connection.registry (реестр коннекторов), connection.factory;
     * bonus — services.bonus.grant_available_bonuses,
       db.crud.bonus / db.crud.student_bonus.
-
-Недостающие функции оформлены прототипами (NotImplementedError)
-и описаны в docs/Прототипы недостающих функций.md.
 """
 
 from __future__ import annotations
@@ -23,8 +22,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 
-from connection import AbstractGradeProvider
-from connection.factory import get_grade_provider
+from connection import AbstractEgasConnector
+from connection.factory import get_egas_connector
 from db.crud import bonus as bonus_crud
 from db.crud import student as student_crud
 from db.crud import student_bonus as student_bonus_crud
@@ -48,17 +47,18 @@ class DailyUpdateReport:
     students_failed: int = 0
     xp_awarded: int = 0  # суммарная ДЕЛЬТА опыта (новое − предыдущее)
     expired_bonus_ids: list[int] = field(default_factory=list)
+    bonus_links_revoked: int = 0
     bonuses_granted: int = 0
     errors: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
-# Шаг 1. Опрос ЭСУО и обновление опыта
+# Шаг 2. Опрос ЭСУО и обновление опыта
 # ---------------------------------------------------------------------------
 
 async def update_student_experience(
     student_id: int,
-    provider: AbstractGradeProvider | None = None,
+    provider: AbstractEgasConnector | None = None,
 ) -> int:
     """
     Опрашивает ЭСУО об оценках одного студента и пересчитывает опыт.
@@ -69,16 +69,18 @@ async def update_student_experience(
 
     Args:
         student_id: ID студента.
-        provider: Готовый провайдер оценок. Если None — подбирается
-            автоматически через connection.factory.get_grade_provider().
+        provider: Готовый коннектор ЭСУО. Если None — подбирается
+            автоматически через connection.factory.get_egas_connector().
 
     Returns:
         Изменение опыта (дельту) за этот прогон.
     """
     if provider is None:
-        provider = await get_grade_provider(student_id)
+        provider = await get_egas_connector(student_id)
 
-    grades = await provider.get_grades_count(student_id=student_id)
+    async with provider:
+        grades = await provider.get_grades_count(student_id=student_id)
+
     return await calculate_and_save_school_experience(student_id, grades)
 
 
@@ -94,11 +96,6 @@ async def update_all_students_grades(report: DailyUpdateReport) -> None:
             xp = await update_student_experience(student.id)
             report.students_updated += 1
             report.xp_awarded += xp
-        except NotImplementedError as exc:
-            # Прототип ещё не реализован — не валит весь прогон.
-            report.students_failed += 1
-            report.errors.append(f"student {student.id}: {exc}")
-            logger.warning("Прототип не реализован: %s", exc)
         except Exception as exc:  # noqa: BLE001 — изоляция ошибок по студенту
             report.students_failed += 1
             report.errors.append(f"student {student.id}: {exc}")
@@ -106,7 +103,7 @@ async def update_all_students_grades(report: DailyUpdateReport) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Шаг 2. Проверка бонусов на истечение срока действия
+# Шаг 1. Проверка бонусов на истечение срока действия
 # ---------------------------------------------------------------------------
 
 async def expire_bonuses(
@@ -115,8 +112,15 @@ async def expire_bonuses(
     today: date | None = None,
 ) -> None:
     """
-    Проверяет все существующие бонусы на истечение срока действия
-    и отзывает просроченные бонусы у всех студентов.
+    Проверяет все существующие бонусы на истечение срока действия:
+    истёкший бонус удаляется из БД вместе со всеми выдачами студентам.
+
+    Связи `student_bonus` удаляет сама база: у внешнего ключа
+    `student_bonus.bonus_id → bonus.id` стоит ON DELETE CASCADE
+    (см. db/models/associations.py и миграцию
+    alembic/versions/3a7c1d5e9b42_student_bonus_bonus_cascade.py),
+    поэтому достаточно удалить сам бонус. Размер каскада считаем
+    заранее — одним запросом на бонус.
 
     Args:
         report: Отчёт, куда складываются id истёкших бонусов.
@@ -127,15 +131,18 @@ async def expire_bonuses(
     async with session_scope() as session:
         expired = await bonus_crud.get_expired(session, date_now=current)
         for bonus in expired:
-            student_ids = await student_bonus_crud.get_student_ids_for_bonus(
-                session, bonus.id
+            bonus_id = bonus.id
+            links = await student_bonus_crud.count_students_for_bonus(
+                session, bonus_id
             )
-            for student_id in student_ids:
-                await student_bonus_crud.remove(
-                    session, student_id=student_id, bonus_id=bonus.id
-                )
-            report.expired_bonus_ids.append(bonus.id)
-            logger.info("Бонус %s истёк и отозван у %s студентов", bonus.id, len(student_ids))
+            await bonus_crud.delete(session, bonus_id)
+            report.expired_bonus_ids.append(bonus_id)
+            report.bonus_links_revoked += links
+            logger.info(
+                "Бонус %s истёк: удалён вместе с %s выдачами студентам",
+                bonus_id,
+                links,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -169,33 +176,32 @@ async def refresh_available_bonuses(report: DailyUpdateReport) -> None:
 # ---------------------------------------------------------------------------
 
 async def run_daily_update() -> DailyUpdateReport:
-    """Выполняет полный цикл: оценки → сроки бонусов → доступные бонусы."""
+    """Выполняет полный цикл: сроки бонусов → оценки/опыт → доступные бонусы."""
     report = DailyUpdateReport()
     logger.info("Ежедневное обновление: старт")
 
-    await update_all_students_grades(report)
-
-    # Шаг 2 может опираться на ещё не реализованный прототип
-    # (bonus_crud.get_expired) — не должны из-за него отменяться шаги 1 и 3.
+    # Шаг 1: истёкшие бонусы удаляются до пересчёта опыта и выдачи новых,
+    # чтобы они не попали в выдачу этого же прогона.
     try:
         await expire_bonuses(report)
-    except NotImplementedError as exc:
-        report.errors.append(f"expire_bonuses: {exc}")
-        logger.warning("Проверка сроков бонусов пропущена: %s", exc)
     except Exception:  # noqa: BLE001 — шаг не должен валить прогон
         report.errors.append("expire_bonuses: unexpected error")
-        logger.exception("Ошибка при проверке сроков бонусов")
+        logger.exception("Ошибка при удалении истёкших бонусов")
+
+    await update_all_students_grades(report)
 
     await refresh_available_bonuses(report)
 
     logger.info(
         "Ежедневное обновление: готово (студентов %s, обновлено %s, "
-        "ошибок %s, ΔXP %s, истекло бонусов %s, выдано бонусов %s)",
+        "ошибок %s, ΔXP %s, истекло бонусов %s, отозвано связей %s, "
+        "выдано бонусов %s)",
         report.students_total,
         report.students_updated,
         report.students_failed,
         report.xp_awarded,
         len(report.expired_bonus_ids),
+        report.bonus_links_revoked,
         report.bonuses_granted,
     )
     return report
