@@ -64,7 +64,7 @@ async def get_expired(
     session: AsyncSession, *, date_now: date | None = None
 ) -> list[Bonus]:
     """
-    ПРОТОТИП: возвращает бонусы, у которых истёк срок действия.
+    Возвращает бонусы, у которых истёк срок действия.
 
     Args:
         session: Сессия БД.
@@ -73,13 +73,15 @@ async def get_expired(
     Returns:
         Бонусы с end_date < date_now. Бонусы без срока (end_date IS NULL)
         никогда не считаются истёкшими.
-
-    Raises:
-        NotImplementedError: прототип, ещё не реализован
-            (см. docs/Прототипы недостающих функций.md).
-    """    raise NotImplementedError(
-        "Прототип: выборка бонусов с истёкшим сроком действия"
+    """
+    timestamp = date_now or date.today()
+    result = await session.execute(
+        select(Bonus).where(
+            Bonus.end_date.is_not(None),
+            Bonus.end_date < timestamp,
+        )
     )
+    return list(result.scalars())
 
 
 async def update(
