@@ -143,6 +143,11 @@ def check_scenarios() -> list[str]:
 
 
 def _main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "demo":
+        from mock_egas.demo import main as demo_main
+
+        return demo_main(sys.argv[2:])
+
     if len(sys.argv) >= 3 and sys.argv[1] == "--raw":
         name = sys.argv[2]
         if name not in SCENARIOS:
