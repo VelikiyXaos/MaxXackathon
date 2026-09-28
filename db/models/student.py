@@ -29,5 +29,7 @@ class Student(Base):
         back_populates="students"
     )
     bonuses: Mapped[list["Bonus"]] = relationship(
-        secondary="student_bonus", back_populates="students"
+        secondary="student_bonus",
+        back_populates="students",
+        passive_deletes=True,
     )

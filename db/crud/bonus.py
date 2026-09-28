@@ -11,6 +11,7 @@ from db.models import Bonus
 async def create(
     session: AsyncSession,
     *,
+    name: str = "",
     promocode: str,
     need_experience: int,
     partner_id: int,
@@ -18,6 +19,7 @@ async def create(
 ) -> Bonus:
     """Создаёт новый бонус и возвращает его."""
     bonus = Bonus(
+        name=name,
         promocode=promocode,
         need_experience=need_experience,
         partner_id=partner_id,

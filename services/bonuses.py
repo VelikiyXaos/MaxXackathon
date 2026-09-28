@@ -15,6 +15,7 @@ MAX_BONUS_LEVEL = 15
 def _serialize_bonus(bonus) -> dict:
     return {
         "id": bonus.id,
+        "name": bonus.name,
         "promocode": bonus.promocode,
         "need_experience": bonus.need_experience,
         "level": get_level_for_xp(bonus.need_experience),
@@ -131,7 +132,6 @@ async def add_bonus(
     Партнёр задаёт уровень, а в БД хранится порог опыта этого
     уровня: need_experience = get_xp_for_level(level).
     deadline — уже распарсенная вызывающим кодом дата (или None).
-    name принимается, но пока не сохраняется: в модели Bonus поля name нет.
     """
     if not MIN_BONUS_LEVEL <= level <= MAX_BONUS_LEVEL:
         raise ValueError(
@@ -153,6 +153,7 @@ async def add_bonus(
 
         await bonus_crud.create(
             session,
+            name=(name or "").strip(),
             promocode=promocode.strip(),
             need_experience=need_experience,
             partner_id=partner.id,
