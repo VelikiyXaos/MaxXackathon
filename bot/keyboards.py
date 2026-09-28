@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 ASSETS_DIR = Path(__file__).parent / "assets"
 AGREEMENT_FILE = ASSETS_DIR / "Пользовательское соглашение.pdf"
 
+PROMOCODE_BUTTON_MAX = 20
+
 
 def _callback_button(text: str, payload: payloads.CallbackPayload) -> CallbackButton:
     return CallbackButton(text=text, payload=payload.pack())
@@ -157,6 +159,12 @@ def student_menu_keyboard() -> Attachment:
             ],
             [
                 _callback_button(
+                    buttons.BTN_AVAILABLE_BONUSES,
+                    payloads.AvailableBonusesPayload(),
+                )
+            ],
+            [
+                _callback_button(
                     buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
                 )
             ],
@@ -170,7 +178,7 @@ def commercial_partner_menu_keyboard() -> Attachment:
         buttons=[
             [
                 _callback_button(
-                    buttons.BTN_MY_BONUSES, payloads.MyBonusesPayload()
+                    buttons.BTN_MY_BONUSES, payloads.PartnerBonusesPayload()
                 )
             ],
             [
@@ -180,6 +188,35 @@ def commercial_partner_menu_keyboard() -> Attachment:
             ],
         ]
     ).pack()
+
+
+def available_bonus_keyboard(bonuses: list[dict]) -> Attachment:
+    """Кнопка получения под каждым доступным бонусом и возврат назад.
+
+    «Назад» идёт последней строкой в той же клавиатуре: второе
+    вложение в attachments MAX отправил бы отдельным сообщением.
+    Промокод в подписи обрезается — полный код и так печатается
+    в теле сообщения через BONUS_LINE_TEMPLATE.
+    """
+    rows = [
+        [
+            _callback_button(
+                f"{buttons.BTN_BONUS_TAKE} {_short_promocode(item)}",
+                payloads.TakeBonusPayload(bonus_id=item.get("id", 0)),
+            )
+        ]
+        for item in bonuses
+    ]
+    rows.append([_callback_button(buttons.BTN_BACK, payloads.BackPayload())])
+    return ButtonsPayload(buttons=rows).pack()
+
+
+def _short_promocode(bonus: dict) -> str:
+    """Промокод для подписи кнопки."""
+    promocode = str(bonus.get("promocode", ""))
+    if len(promocode) > PROMOCODE_BUTTON_MAX:
+        return promocode[:PROMOCODE_BUTTON_MAX] + "…"
+    return promocode
 
 
 def admin_menu_keyboard() -> Attachment:

@@ -51,15 +51,39 @@ PARTNER_APPLICATION_SENT = (
 )
 
 # Меню учащегося
-MY_BONUSES_EMPTY = "У вас пока нет доступных бонусов."
+MY_BONUSES_EMPTY = "Вы пока не получили ни одного бонуса."
 MY_BONUSES_TEMPLATE = "Ваши бонусы:\n{bonuses}"
+AVAILABLE_BONUSES_EMPTY = (
+    "Пока нет доступных бонусов. Копайте опыт — новые уровни "
+    "открывают новые промокоды!"
+)
+AVAILABLE_BONUSES_TEMPLATE = "Доступные бонусы:\n{bonuses}"
+BONUS_TAKEN = "Бонус «{promocode}» получен!"
 MY_PROGRESS_EMPTY = "Информация о прогрессе пока недоступна."
 MY_PROGRESS_TEMPLATE = (
     "Ваш прогресс:\n"
     "- Опыт: {experience}\n"
     "- Уровень: {level}\n"
-    "- До следующего уровня: {next_level}"
+    "{bar}\n"
+    "- До следующего уровня: {next_level} опыта"
 )
+
+# Шкала опыта внутри уровня
+XP_BAR_WIDTH = 10
+XP_BAR_FILLED = "█"
+XP_BAR_EMPTY = "░"
+
+
+def render_xp_bar(percent: float) -> str:
+    """Строит шкалу опыта по проценту прогресса внутри уровня.
+
+    Процент зажимается в 0..100: отрицательный опыт возможен
+    (оценка «2» снимает 20 опыта), а на 15 уровне процент
+    приходит уже 100. Полная шкала рисуется только на 100.
+    """
+    clamped = max(0.0, min(100.0, float(percent)))
+    filled = int(clamped / 100 * XP_BAR_WIDTH)
+    return XP_BAR_FILLED * filled + XP_BAR_EMPTY * (XP_BAR_WIDTH - filled)
 
 # Меню коммерческого партнёра
 PARTNER_BONUSES_EMPTY = "Вы пока не добавили ни одного бонуса."
@@ -68,14 +92,17 @@ PARTNER_BONUSES_TEMPLATE = "Ваши бонусы:\n{bonuses}"
 # Строка списка бонусов (общая для ученика и партнёра)
 BONUS_LINE_TEMPLATE = (
     "Промокод: {promocode}\n"
-    "Требуемый опыт: {need_experience}\n"
+    "Требуемый уровень: {level}\n"
     "Действует до: {end_date}"
 )
 BONUS_NO_DEADLINE = "бессрочно"
 
 # Добавление бонуса
 BONUS_NAME_REQUEST = "Введите название бонуса:"
-BONUS_CONDITION_REQUEST = "Введите условие получения бонуса:"
+BONUS_CONDITION_REQUEST = (
+    "Введите уровень от 1 до 15, с которого бонус становится доступен:"
+)
+BONUS_LEVEL_INVALID = "Введите целое число от 1 до 15 — например, 3:"
 BONUS_DEADLINE_REQUEST = "Введите дату, до которой действует бонус (ДД.ММ.ГГГГ):"
 BONUS_DEADLINE_INVALID = (
     "Не удалось распознать дату. Введите дату в формате ДД.ММ.ГГГГ, "

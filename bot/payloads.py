@@ -43,7 +43,25 @@ class PartnerTypePayload(CallbackPayload):
 
 
 class MyBonusesPayload(CallbackPayload):
-    """Кнопка «Мои бонусы»."""
+    """Кнопка «Мои бонусы» в меню ученика."""
+
+
+class PartnerBonusesPayload(CallbackPayload):
+    """Кнопка «Мои бонусы» в меню коммерческого партнёра.
+
+    Отдельный payload, иначе хендлер ученика перехватывал бы
+    нажатие партнёра: роутеры подключаются в фиксированном порядке.
+    """
+
+
+class AvailableBonusesPayload(CallbackPayload):
+    """Кнопка «Доступные бонусы» в меню ученика."""
+
+
+class TakeBonusPayload(CallbackPayload):
+    """Кнопка получения бонуса под конкретным промокодом."""
+
+    bonus_id: int
 
 
 class MyProgressPayload(CallbackPayload):

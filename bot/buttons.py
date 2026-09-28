@@ -15,7 +15,11 @@ BTN_PARTNER_TYPE_ESOU = "⚙️ ЭСОУ"
 
 # Меню учащегося
 BTN_MY_BONUSES = "🎁 Мои бонусы"
+BTN_AVAILABLE_BONUSES = "🎯 Доступные бонусы"
 BTN_MY_PROGRESS = "📈 Мой прогресс"
+
+# Выдача бонуса
+BTN_BONUS_TAKE = "✅ Получить"
 
 # Меню коммерческого партнёра
 BTN_ADD_BONUS = "➕ Добавить бонус"

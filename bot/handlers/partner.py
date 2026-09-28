@@ -3,7 +3,11 @@ from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
 from bot.keyboards import back_keyboard
-from bot.payloads import AddBonusPayload, MyBonusesPayload, PartnerTypePayload
+from bot.payloads import (
+    AddBonusPayload,
+    PartnerBonusesPayload,
+    PartnerTypePayload,
+)
 from bot.states import BonusAdding, PartnerRegistration
 from services import auth, bonuses, registration
 
@@ -20,7 +24,7 @@ def _bonus_line(bonus: dict) -> str:
     """Форматирует один бонус для вывода списком."""
     return messages.BONUS_LINE_TEMPLATE.format(
         promocode=bonus.get("promocode", ""),
-        need_experience=bonus.get("need_experience", 0),
+        level=bonus.get("level", 0),
         end_date=bonus.get("end_date") or messages.BONUS_NO_DEADLINE,
     )
 
@@ -77,7 +81,7 @@ async def on_contacts_input(event: MessageCreated, context):
     )
 
 
-@router.message_callback(MyBonusesPayload.filter())
+@router.message_callback(PartnerBonusesPayload.filter())
 async def on_my_bonuses(event: MessageCallback):
     """Кнопка «Мои бонусы» в меню коммерческого партнёра."""
     user_id = event.get_ids()[1] or 0

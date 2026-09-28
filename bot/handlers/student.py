@@ -3,6 +3,7 @@ from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
 from bot.keyboards import (
+    available_bonus_keyboard,
     back_keyboard,
     city_selection_keyboard,
     student_menu_keyboard,
@@ -10,10 +11,12 @@ from bot.keyboards import (
 )
 from bot.payloads import (
     AgreementPayload,
+    AvailableBonusesPayload,
     CitySelectionPayload,
     MyBonusesPayload,
     MyProgressPayload,
     SubjectSelectionPayload,
+    TakeBonusPayload,
 )
 from bot.states import StudentRegistration
 from services import auth, bonuses, progress, registration
@@ -33,7 +36,7 @@ def _bonus_line(bonus: dict) -> str:
     """Форматирует один бонус для вывода списком."""
     return messages.BONUS_LINE_TEMPLATE.format(
         promocode=bonus.get("promocode", ""),
-        need_experience=bonus.get("need_experience", 0),
+        level=bonus.get("level", 0),
         end_date=bonus.get("end_date") or messages.BONUS_NO_DEADLINE,
     )
 
@@ -230,6 +233,55 @@ async def on_my_bonuses(event: MessageCallback):
         )
 
 
+@router.message_callback(AvailableBonusesPayload.filter())
+async def on_available_bonuses(event: MessageCallback):
+    """Кнопка «Доступные бонусы» — что можно получить при текущем опыте."""
+    user_id = event.get_ids()[1] or 0
+    student = await auth.get_student(user_id)
+    if student is None:
+        await event.send(text=messages.UNKNOWN_COMMAND)
+        return
+
+    items = await bonuses.get_available_bonuses(user_id)
+
+    if not items:
+        await event.send(
+            text=messages.AVAILABLE_BONUSES_EMPTY,
+            attachments=[back_keyboard()],
+        )
+    else:
+        lines = [f"• {_bonus_line(item)}" for item in items]
+        await event.send(
+            text=messages.AVAILABLE_BONUSES_TEMPLATE.format(
+                bonuses="\n".join(lines)
+            ),
+            attachments=[available_bonus_keyboard(items)],
+        )
+
+
+@router.message_callback(TakeBonusPayload.filter())
+async def on_take_bonus(
+    event: MessageCallback, payload: TakeBonusPayload
+):
+    """Кнопка «Получить» — выдаём бонус и показываем промокод."""
+    user_id = event.get_ids()[1] or 0
+    student = await auth.get_student(user_id)
+    if student is None:
+        await event.send(text=messages.UNKNOWN_COMMAND)
+        return
+
+    try:
+        bonus = await bonuses.issue_bonus(user_id, payload.bonus_id)
+    except ValueError as exc:
+        await event.send(text=str(exc), attachments=[back_keyboard()])
+        return
+
+    await event.send(
+        text=messages.BONUS_TAKEN.format(promocode=bonus["promocode"]),
+        attachments=[back_keyboard()],
+    )
+
+
 @router.message_callback(MyProgressPayload.filter())
 async def on_my_progress(event: MessageCallback):
     """Кнопка «Мой прогресс» в меню учащегося."""
@@ -240,7 +292,14 @@ async def on_my_progress(event: MessageCallback):
         return
 
     result = await progress.get_student_progress(user_id)
+    if result is None:
+        await event.send(text=messages.MY_PROGRESS_EMPTY)
+        return
+
     await event.send(
-        text=messages.MY_PROGRESS_TEMPLATE.format(**result),
+        text=messages.MY_PROGRESS_TEMPLATE.format(
+            bar=messages.render_xp_bar(result["progress_percent"]),
+            **result,
+        ),
         attachments=[back_keyboard()],
     )

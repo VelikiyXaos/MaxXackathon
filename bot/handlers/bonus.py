@@ -28,7 +28,16 @@ async def on_bonus_name(event: MessageCreated, context):
 @router.message_created(states=BonusAdding.CONDITION)
 async def on_bonus_condition(event: MessageCreated, context):
     """Условие принято — запрашиваем срок действия."""
-    await context.update_data(bonus_condition=_message_text(event))
+    try:
+        level = int(_message_text(event))
+    except ValueError:
+        level = 0
+
+    if not bonuses.MIN_BONUS_LEVEL <= level <= bonuses.MAX_BONUS_LEVEL:
+        await event.message.answer(text=messages.BONUS_LEVEL_INVALID)
+        return
+
+    await context.update_data(bonus_level=level)
     await context.set_state(BonusAdding.DEADLINE)
     await event.message.answer(text=messages.BONUS_DEADLINE_REQUEST)
 
@@ -72,11 +81,16 @@ async def on_bonus_promo(event: MessageCreated, context):
         await event.message.answer(text=messages.BONUS_DEADLINE_INVALID)
         return
 
+    level = data.get("bonus_level")
+    if level is None:
+        await event.message.answer(text=messages.BONUS_LEVEL_INVALID)
+        return
+
     try:
         await bonuses.add_bonus(
             partner_max_id=event.get_ids()[1] or 0,
             name=data.get("bonus_name", ""),
-            condition=data.get("bonus_condition", ""),
+            level=level,
             deadline=deadline,
             promocode=promo,
         )
