@@ -11,6 +11,7 @@ from . import session_scope
 def _serialize_bonus(bonus) -> dict:
     return {
         "id": bonus.id,
+        "name": bonus.name,
         "promocode": bonus.promocode,
         "need_experience": bonus.need_experience,
         "partner_id": bonus.partner_id,
@@ -63,7 +64,6 @@ async def add_bonus(
     """Добавляет новый бонус от партнёра.
 
     deadline — уже распарсенная вызывающим кодом дата (или None).
-    name принимается, но пока не сохраняется: в модели Bonus поля name нет.
     """
     need_experience = _parse_condition(condition)
 
@@ -79,6 +79,7 @@ async def add_bonus(
 
         await bonus_crud.create(
             session,
+            name=(name or "").strip(),
             promocode=promocode.strip(),
             need_experience=need_experience,
             partner_id=partner.id,

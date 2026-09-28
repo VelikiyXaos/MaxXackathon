@@ -15,5 +15,11 @@ student_bonus = Table(
     "student_bonus",
     Base.metadata,
     Column("student_id", ForeignKey("student.id"), primary_key=True),
-    Column("bonus_id", ForeignKey("bonus.id"), primary_key=True),
+    # ON DELETE CASCADE: удаление бонуса само убирает все выдачи студентам,
+    # связи не приходится чистить вручную (см. Bonus.students.passive_deletes)
+    Column(
+        "bonus_id",
+        ForeignKey("bonus.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
