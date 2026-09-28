@@ -65,6 +65,14 @@ MY_PROGRESS_TEMPLATE = (
 PARTNER_BONUSES_EMPTY = "Вы пока не добавили ни одного бонуса."
 PARTNER_BONUSES_TEMPLATE = "Ваши бонусы:\n{bonuses}"
 
+# Строка списка бонусов (общая для ученика и партнёра)
+BONUS_LINE_TEMPLATE = (
+    "Промокод: {promocode}\n"
+    "Требуемый опыт: {need_experience}\n"
+    "Действует до: {end_date}"
+)
+BONUS_NO_DEADLINE = "бессрочно"
+
 # Добавление бонуса
 BONUS_NAME_REQUEST = "Введите название бонуса:"
 BONUS_CONDITION_REQUEST = "Введите условие получения бонуса:"
