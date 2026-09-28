@@ -55,13 +55,32 @@ async def get_partner_bonuses(max_id: int) -> list[dict]:
 async def add_bonus(
     *,
     partner_id: int,
-    name: str,
+    # name: str,
     condition: str,
     deadline: str,
     promocode: str,
 ) -> None:
-    # TODO: реализовать добавление бонуса
-    return None
+    """Добавляет новый бонус от партнёра."""
+    need_experience = _parse_condition(condition)
+    end_date = _parse_deadline(deadline)
+
+    if not promocode or not promocode.strip():
+        raise ValueError("Промокод не может быть пустым.")
+
+    async with session_scope() as session:
+        partner = await partner_crud.get_by_max_id(session, partner_id)
+        if partner is None:
+            raise ValueError(
+                f"Партнёр с max_id={partner_id} не найден."
+            )
+
+        await bonus_crud.create(
+            session,
+            promocode=promocode.strip(),
+            need_experience=need_experience,
+            partner_id=partner.id,
+            end_date=end_date,
+        )
 
 # --- 
 
@@ -84,3 +103,20 @@ def _parse_deadline(deadline: str) -> date | None:
         f"Не удалось распознать дату. "
         "Требуется формат: DD.MM.YYYY"
     )
+
+def _parse_condition(condition: str) -> int:
+    """Извлекает требуемый опыт из строки условия."""
+    condition = (condition or "").strip()
+    if not condition:
+        raise ValueError("Условие бонуса не может быть пустым.")
+    digits = ""
+    for ch in condition:
+        if ch.isdigit():
+            digits += ch
+        elif digits:
+            break
+    if not digits:
+        raise ValueError(
+            f"Не удалось извлечь число из условия '{condition}'."
+        )
+    return int(digits)
