@@ -54,8 +54,8 @@ PARTNER_APPLICATION_SENT = (
 MY_BONUSES_EMPTY = "Вы пока не получили ни одного бонуса."
 MY_BONUSES_TEMPLATE = "Ваши бонусы:\n{bonuses}"
 AVAILABLE_BONUSES_EMPTY = (
-    "Пока нет доступных бонусов. Копайте опыт — новые уровни "
-    "открывают новые промокоды!"
+    "Пока нет доступных бонусов. Зарабатывайте опыт — открывайте новые уровни "
+    "получайте новые промокоды!"
 )
 AVAILABLE_BONUSES_TEMPLATE = "Доступные бонусы:\n{bonuses}"
 BONUS_TAKEN = "Бонус «{promocode}» получен!"
