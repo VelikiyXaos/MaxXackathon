@@ -16,6 +16,15 @@ def _message_text(event: MessageCreated) -> str:
     return body.text.strip() if body and body.text else ""
 
 
+def _bonus_line(bonus: dict) -> str:
+    """Форматирует один бонус для вывода списком."""
+    return messages.BONUS_LINE_TEMPLATE.format(
+        promocode=bonus.get("promocode", ""),
+        need_experience=bonus.get("need_experience", 0),
+        end_date=bonus.get("end_date") or messages.BONUS_NO_DEADLINE,
+    )
+
+
 @router.message_callback(PartnerTypePayload.filter())
 async def on_partner_type(event: MessageCallback, payload: PartnerTypePayload, context):
     """Тип партнёра выбран — запрашиваем название компании."""
@@ -77,7 +86,7 @@ async def on_my_bonuses(event: MessageCallback):
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 
-    items = await bonuses.get_partner_bonuses(partner.id)
+    items = await bonuses.get_partner_bonuses(user_id)
 
     if not items:
         await event.send(
@@ -85,7 +94,7 @@ async def on_my_bonuses(event: MessageCallback):
             attachments=[back_keyboard()],
         )
     else:
-        lines = [f"• {item}" for item in items]
+        lines = [f"• {_bonus_line(item)}" for item in items]
         await event.send(
             text=messages.PARTNER_BONUSES_TEMPLATE.format(
                 bonuses="\n".join(lines)

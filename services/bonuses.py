@@ -1,6 +1,6 @@
 # services
 
-from datetime import date, datetime
+from datetime import date
 
 from db.crud import bonus as bonus_crud
 from db.crud import partner as partner_crud
@@ -18,10 +18,10 @@ def _serialize_bonus(bonus) -> dict:
     }
 
 
-async def get_student_bonuses(max_id: int) -> list[dict]:
+async def get_student_bonuses(student_max_id: int) -> list[dict]:
     """Возвращает список бонусов, выданных учащемуся."""
     async with session_scope() as session:
-        student = await student_crud.get_by_max_id(session, max_id)
+        student = await student_crud.get_by_max_id(session, student_max_id)
         if student is None:
             return []
 
@@ -40,10 +40,10 @@ async def get_student_bonuses(max_id: int) -> list[dict]:
 
 
 
-async def get_partner_bonuses(max_id: int) -> list[dict]:
+async def get_partner_bonuses(partner_max_id: int) -> list[dict]:
     """Возвращает список бонусов, созданных партнёром."""
     async with session_scope() as session:
-        partner = await partner_crud.get_by_max_id(session, max_id)
+        partner = await partner_crud.get_by_max_id(session, partner_max_id)
         if partner is None:
             return []
 
@@ -54,24 +54,27 @@ async def get_partner_bonuses(max_id: int) -> list[dict]:
 
 async def add_bonus(
     *,
-    partner_id: int,
-    # name: str,
+    partner_max_id: int,
+    name: str | None = None,
     condition: str,
-    deadline: str,
+    deadline: date | None,
     promocode: str,
 ) -> None:
-    """Добавляет новый бонус от партнёра."""
+    """Добавляет новый бонус от партнёра.
+
+    deadline — уже распарсенная вызывающим кодом дата (или None).
+    name принимается, но пока не сохраняется: в модели Bonus поля name нет.
+    """
     need_experience = _parse_condition(condition)
-    end_date = _parse_deadline(deadline)
 
     if not promocode or not promocode.strip():
         raise ValueError("Промокод не может быть пустым.")
 
     async with session_scope() as session:
-        partner = await partner_crud.get_by_max_id(session, partner_id)
+        partner = await partner_crud.get_by_max_id(session, partner_max_id)
         if partner is None:
             raise ValueError(
-                f"Партнёр с max_id={partner_id} не найден."
+                f"Партнёр с max_id={partner_max_id} не найден."
             )
 
         await bonus_crud.create(
@@ -79,30 +82,10 @@ async def add_bonus(
             promocode=promocode.strip(),
             need_experience=need_experience,
             partner_id=partner.id,
-            end_date=end_date,
+            end_date=deadline,
         )
 
 # --- 
-
-def _parse_deadline(deadline: str) -> date | None:
-    """Парсит дату дедлайна из строки.
-    DD.MM.YYYY
-    Пустая строка/None = None.
-    """
-    if not deadline:
-        return None
-    deadline = deadline.strip()
-    if not deadline:
-        return None
-    for fmt in ("%d.%m.%Y"):
-        try:
-            return datetime.strptime(deadline, fmt).date()
-        except ValueError:
-            continue
-    raise ValueError(
-        f"Не удалось распознать дату. "
-        "Требуется формат: DD.MM.YYYY"
-    )
 
 def _parse_condition(condition: str) -> int:
     """Извлекает требуемый опыт из строки условия."""

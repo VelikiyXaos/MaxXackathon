@@ -67,13 +67,22 @@ async def on_bonus_promo(event: MessageCreated, context):
         await event.message.answer(text=messages.UNKNOWN_COMMAND)
         return
 
-    await bonuses.add_bonus(
-        partner_id=partner.id,
-        name=data.get("bonus_name", ""),
-        condition=data.get("bonus_condition", ""),
-        deadline=data.get("bonus_deadline", ""),
-        promocode=promo,
-    )
+    deadline = data.get("bonus_deadline")
+    if deadline is None:
+        await event.message.answer(text=messages.BONUS_DEADLINE_INVALID)
+        return
+
+    try:
+        await bonuses.add_bonus(
+            partner_max_id=event.get_ids()[1] or 0,
+            name=data.get("bonus_name", ""),
+            condition=data.get("bonus_condition", ""),
+            deadline=deadline,
+            promocode=promo,
+        )
+    except ValueError as exc:
+        await event.message.answer(text=str(exc))
+        return
 
     await context.clear()
     await event.message.answer(
