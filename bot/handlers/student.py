@@ -239,7 +239,7 @@ async def on_my_progress(event: MessageCallback):
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 
-    result = await progress.get_student_progress(student.id)
+    result = await progress.get_student_progress(user_id)
     await event.send(
         text=messages.MY_PROGRESS_TEMPLATE.format(**result),
         attachments=[back_keyboard()],
