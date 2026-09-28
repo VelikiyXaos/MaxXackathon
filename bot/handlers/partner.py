@@ -23,6 +23,7 @@ def _message_text(event: MessageCreated) -> str:
 def _bonus_line(bonus: dict) -> str:
     """Форматирует один бонус для вывода списком."""
     return messages.BONUS_LINE_TEMPLATE.format(
+        name=bonus.get("name") or messages.BONUS_NO_NAME,
         promocode=bonus.get("promocode", ""),
         level=bonus.get("level", 0),
         end_date=bonus.get("end_date") or messages.BONUS_NO_DEADLINE,

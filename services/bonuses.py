@@ -12,6 +12,10 @@ from .experience import get_level_for_xp, get_xp_for_level
 MIN_BONUS_LEVEL = 1
 MAX_BONUS_LEVEL = 15
 
+# Ширина колонки bonus.name в БД: длинное имя молча уронило бы
+# коммит DataError'ом, минуя ValueError, который ловит хендлер.
+MAX_BONUS_NAME_LEN = 255
+
 def _serialize_bonus(bonus) -> dict:
     return {
         "id": bonus.id,
@@ -132,6 +136,7 @@ async def add_bonus(
     Партнёр задаёт уровень, а в БД хранится порог опыта этого
     уровня: need_experience = get_xp_for_level(level).
     deadline — уже распарсенная вызывающим кодом дата (или None).
+    name необязателен: пустое заменяется на «Бонус от <компания>».
     """
     if not MIN_BONUS_LEVEL <= level <= MAX_BONUS_LEVEL:
         raise ValueError(
@@ -151,9 +156,22 @@ async def add_bonus(
                 f"Партнёр с max_id={partner_max_id} не найден."
             )
 
+        # Заглушка собирается после загрузки партнёра, потому что
+        # нужна его компания.
+        bonus_name = (name or "").strip()
+        if not bonus_name:
+            # Свой текст обрезаем по лимиту колонки, а не ругаемся:
+            # partner.name бывает длиной 255, и «Бонус от » сверху
+            # вытолкнул бы партнёра за лимит своим же названием.
+            bonus_name = f"Бонус от {partner.name}"[:MAX_BONUS_NAME_LEN]
+        elif len(bonus_name) > MAX_BONUS_NAME_LEN:
+            raise ValueError(
+                f"Название бонуса длиннее {MAX_BONUS_NAME_LEN} символов."
+            )
+
         await bonus_crud.create(
             session,
-            name=(name or "").strip(),
+            name=bonus_name,
             promocode=promocode.strip(),
             need_experience=need_experience,
             partner_id=partner.id,
