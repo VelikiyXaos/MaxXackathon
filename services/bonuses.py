@@ -1,5 +1,7 @@
 # services
 
+from datetime import date, datetime
+
 from db.crud import bonus as bonus_crud
 from db.crud import partner as partner_crud
 from db.crud import student as student_crud
@@ -53,3 +55,25 @@ async def add_bonus(
 ) -> None:
     # TODO: реализовать добавление бонуса
     return None
+
+# --- 
+
+def _parse_deadline(deadline: str) -> date | None:
+    """Парсит дату дедлайна из строки.
+    DD.MM.YYYY
+    Пустая строка/None = None.
+    """
+    if not deadline:
+        return None
+    deadline = deadline.strip()
+    if not deadline:
+        return None
+    for fmt in ("%d.%m.%Y"):
+        try:
+            return datetime.strptime(deadline, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(
+        f"Не удалось распознать дату. "
+        "Требуется формат: DD.MM.YYYY"
+    )
