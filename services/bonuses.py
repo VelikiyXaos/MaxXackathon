@@ -41,8 +41,15 @@ async def get_student_bonuses(max_id: int) -> list[dict]:
 
 
 async def get_partner_bonuses(max_id: int) -> list[dict]:
-    # TODO: реализовать получение списка бонусов партнёра
-    return []
+    """Возвращает список бонусов, созданных партнёром."""
+    async with session_scope() as session:
+        partner = await partner_crud.get_by_max_id(session, max_id)
+        if partner is None:
+            return []
+
+        bonuses = await bonus_crud.get_by_partner(session, partner.id)
+        return [_serialize_bonus(b) for b in bonuses]
+
 
 
 async def add_bonus(
