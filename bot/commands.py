@@ -1,5 +1,3 @@
-"""Команды бота: подсказки, которые MAX показывает при вводе «/»."""
-
 import logging
 
 from maxapi import Bot
@@ -16,14 +14,12 @@ BOT_COMMANDS = (
 
 
 async def setup_commands(bot: Bot) -> None:
-    """Публикует список команд."""
+    """Публикует список команд, который MAX показывает при вводе «/»"""
     try:
         result = await bot.set_commands(*BOT_COMMANDS)
     except Exception as exc:
         logger.warning("Не удалось обновить список команд бота: %r", exc)
         return
 
-    logger.info(
-        "Команды бота обновлены: %s",
-        ", ".join(f"/{item.name}" for item in (result.commands or [])),
-    )
+    names = ", ".join(f"/{item.name}" for item in (result.commands or []))
+    logger.info("Команды бота обновлены: %s", names)

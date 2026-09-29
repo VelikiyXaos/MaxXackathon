@@ -2,12 +2,12 @@ from __future__ import annotations
 
 
 class EgasError(RuntimeError):
-    """Ошибка общения с сервером ЭСУО (сеть, HTTP, неожиданный формат)"""
+    pass
 
 
 class EgasAuthError(EgasError):
-    """Не удалось авторизоваться в ЭСУО (нет пароля, отказ сервера)"""
+    pass
 
 
 class EgasStudentNotFoundError(EgasError):
-    """У логина в ЭСУО нет ученического профиля"""
+    pass

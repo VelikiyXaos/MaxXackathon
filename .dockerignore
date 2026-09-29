@@ -16,7 +16,7 @@ __pycache__
 # Секреты: в образ попадают только через environment / env_file.
 .env
 .env.*
-!.env.template
+!.env.example
 
 # Не относятся к рантайму.
 docs

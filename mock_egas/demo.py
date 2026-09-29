@@ -7,8 +7,10 @@ from datetime import date, timedelta
 
 from connection.connectors.mock_demo import (
     MockEgasConnector,
+    daily_load,
     marks_for_day,
     scenario_for_day,
+    set_run_start,
 )
 from db.crud import educational_institution as ei_crud
 from db.crud import egas as egas_crud
@@ -21,10 +23,12 @@ from services.experience import get_student_level_info
 MOCK_CLASS = "MockEgasConnector"
 REAL_CLASS = "NetSchoolConnector"
 MOCK_EGAS_NAME = "ЭСУО-имитация (mock_egas)"
+SIMULATED_WEEKS = 4
+SIMULATED_DAYS = SIMULATED_WEEKS * 7
 
 
 async def show_status() -> None:
-    """Показать ЭГАС и подключённые к ним коннекторы"""
+    """Печатает ЭГАС и подключённые к ним коннекторы"""
     async with session_scope() as session:
         rows = await egas_crud.get_all(session)
         if not rows:
@@ -40,7 +44,7 @@ async def show_status() -> None:
 
 
 async def switch(target: str) -> None:
-    """Переключить все ЭГАС на коннектор `target` (при необходимости создать)"""
+    """Переключает все ЭГАС на коннектор target, создавая ЭГАС при нужде"""
     async with session_scope() as session:
         rows = await egas_crud.get_all(session)
         if not rows:
@@ -64,7 +68,7 @@ async def switch(target: str) -> None:
 
 
 async def run_nights(days: int, start: date) -> None:
-    """Прогнать `days` ночных обновлений подряд, начиная с `start`"""
+    """Прогоняет ночные обновления подряд, начиная с даты start"""
     students_info: list[tuple[int, str]] = []
     async with session_scope() as session:
         for student in await student_crud.get_all(session):
@@ -73,11 +77,12 @@ async def run_nights(days: int, start: date) -> None:
     print(f"Симуляция {days} ночей начиная с {start.isoformat()}\n")
     header = (
         f"{'ночь':<6}{'дата':<12}{'день':<10}{'сценарий':<26}"
-        f"{'новых':<7}{'ΔXP':<7}итог"
+        f"{'нагрузка':<10}{'новых':<7}{'ΔXP':<7}итог"
     )
     print(header)
     print("-" * len(header))
 
+    set_run_start(start)
     for index in range(days):
         night = start + timedelta(days=index)
         MockEgasConnector.set_today(night)
@@ -95,15 +100,17 @@ async def run_nights(days: int, start: date) -> None:
         print(
             f"{index + 1:<6}{night.isoformat():<12}"
             f"{night.strftime('%a'):<10}{scenario_for_day(night):<26}"
-            f"{len(fresh):<7}{report.xp_awarded:<7}{'; '.join(levels)}"
+            f"×{daily_load(night):<9}{len(fresh):<7}{report.xp_awarded:<7}"
+            f"{'; '.join(levels)}"
         )
 
     MockEgasConnector.set_today(None)
+    set_run_start(None)
     print("\nГотово, «сегодня» снова реальное.")
 
 
 async def amain(argv: list[str] | None = None) -> int:
-    """Асинхронная точка входа (удобно вызывать из тестов)"""
+    """Разбирает аргументы и выполняет команду, отдавая код возврата"""
     args = _parse(argv)
     try:
         if args.command == "status":
@@ -122,6 +129,7 @@ async def amain(argv: list[str] | None = None) -> int:
 
 
 def _parse(argv: list[str] | None) -> argparse.Namespace:
+    """Разбирает командную строку demo в Namespace"""
     parser = argparse.ArgumentParser(
         prog="python -m mock_egas demo",
         description="Подключение бота к тестовым данным ЭСУО (mock_egas).",
@@ -131,12 +139,16 @@ def _parse(argv: list[str] | None) -> argparse.Namespace:
     sub.add_parser("on", help="переключить ЭГАС на MockEgasConnector")
     sub.add_parser("off", help="вернуть NetSchoolConnector")
     nights = sub.add_parser("nights", help="прогнать ночи без ожидания 00:00")
-    nights.add_argument("--days", type=int, default=7, help="сколько ночей")
+    nights.add_argument(
+        "--days", type=int, default=SIMULATED_DAYS,
+        help=f"сколько ночей (по умолчанию {SIMULATED_WEEKS} недели)",
+    )
     nights.add_argument("--start", help="дата первой ночи, ГГГГ-ММ-ДД")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Запускает demo в отдельном цикле событий"""
     return asyncio.run(amain(argv))
 
 

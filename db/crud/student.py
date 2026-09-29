@@ -1,5 +1,3 @@
-#crud
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +18,7 @@ async def create(
     password: str | None = None,
     experience: int = 0,
 ) -> Student:
-    """Создаёт нового ученика и возвращает его."""
+    """Создаёт ученика и возвращает его"""
     student = Student(
         name=name,
         surname=surname,
@@ -40,12 +38,12 @@ async def create(
 
 
 async def get(session: AsyncSession, student_id: int) -> Student | None:
-    """Возвращает ученика по id или None."""
+    """Возвращает ученика по id или None"""
     return await session.get(Student, student_id)
 
 
 async def get_all(session: AsyncSession) -> list[Student]:
-    """Возвращает список всех учеников."""
+    """Возвращает список всех учеников"""
     result = await session.execute(select(Student))
     return list(result.scalars())
 
@@ -53,7 +51,7 @@ async def get_all(session: AsyncSession) -> list[Student]:
 async def get_by_institution(
     session: AsyncSession, EI_id: int
 ) -> list[Student]:
-    """Возвращает учеников указанного образовательного учреждения."""
+    """Возвращает учеников указанного учреждения"""
     result = await session.execute(
         select(Student).where(Student.EI_id == EI_id)
     )
@@ -61,7 +59,7 @@ async def get_by_institution(
 
 
 async def get_by_login(session: AsyncSession, login: str) -> Student | None:
-    """Возвращает ученика по логину или None."""
+    """Возвращает ученика по логину или None"""
     result = await session.execute(
         select(Student).where(Student.login == login)
     )
@@ -69,7 +67,7 @@ async def get_by_login(session: AsyncSession, login: str) -> Student | None:
 
 
 async def get_by_max_id(session: AsyncSession, max_id: int) -> Student | None:
-    """Возвращает ученика по внешнему id (max_id) или None."""
+    """Возвращает ученика по внешнему id или None"""
     result = await session.execute(
         select(Student).where(Student.max_id == max_id)
     )
@@ -81,7 +79,7 @@ async def update(
     student_id: int,
     **fields: object,
 ) -> Student | None:
-    """Обновляет указанные поля ученика и возвращает его или None."""
+    """Обновляет указанные поля ученика"""
     student = await session.get(Student, student_id)
     if student is None:
         return None
@@ -93,7 +91,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, student_id: int) -> bool:
-    """Удаляет ученика по id. Возвращает True, если запись удалена."""
+    """Удаляет ученика по id, True если запись была"""
     student = await session.get(Student, student_id)
     if student is None:
         return False
@@ -103,7 +101,7 @@ async def delete(session: AsyncSession, student_id: int) -> bool:
 
 
 async def exists_by_max_id(session: AsyncSession, max_id: int) -> bool:
-    """Проверяет, зарегистрирован ли ученик с таким max_id."""
+    """Проверяет, зарегистрирован ли ученик с таким max_id"""
     result = await session.execute(
         select(Student.id).where(Student.max_id == max_id)
     )
@@ -111,7 +109,7 @@ async def exists_by_max_id(session: AsyncSession, max_id: int) -> bool:
 
 
 async def exists_by_login(session: AsyncSession, login: str) -> bool:
-    """Проверяет, занят ли логин."""
+    """Проверяет, занят ли логин"""
     result = await session.execute(
         select(Student.id).where(Student.login == login)
     )

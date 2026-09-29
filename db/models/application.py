@@ -1,5 +1,3 @@
-# models
-
 from sqlalchemy import Identity, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -7,8 +5,6 @@ from db.database import Base
 
 
 class Application(Base):
-    """Заявка партнёра на подключение."""
-
     __tablename__ = "applications"
 
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)

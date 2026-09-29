@@ -1,5 +1,3 @@
-# db
-
 from .database import Base, SessionFactory, engine
 from .models import (
     Admin,

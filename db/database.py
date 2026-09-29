@@ -14,7 +14,7 @@ DATABASE_URL = os.getenv(
 if not DATABASE_URL:
     raise RuntimeError(
         "Переменная окружения DATABASE_URL не задана. "
-        "Скопируйте .env.template в .env и укажите строку подключения."
+        "Скопируйте .env.example в .env и укажите строку подключения."
     )
 
 engine = create_async_engine(DATABASE_URL, echo=False)

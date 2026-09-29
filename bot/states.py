@@ -2,8 +2,6 @@ from maxapi.context.state_machine import State, StatesGroup
 
 
 class StudentRegistration(StatesGroup):
-    """Состояния регистрации учащегося."""
-
     AGREEMENT = State()
     CITY = State()
     REGION = State()
@@ -17,8 +15,6 @@ class StudentRegistration(StatesGroup):
 
 
 class PartnerRegistration(StatesGroup):
-    """Состояния регистрации партнёра."""
-
     TYPE = State()
     COMPANY = State()
     PROPOSAL = State()
@@ -26,8 +22,6 @@ class PartnerRegistration(StatesGroup):
 
 
 class BonusAdding(StatesGroup):
-    """Состояния добавления нового бонуса."""
-
     NAME = State()
     CONDITION = State()
     DEADLINE = State()
@@ -35,6 +29,4 @@ class BonusAdding(StatesGroup):
 
 
 class AdminAdding(StatesGroup):
-    """Состояние добавления администратора (ожидание ID)."""
-
     WAIT_USER_ID = State()

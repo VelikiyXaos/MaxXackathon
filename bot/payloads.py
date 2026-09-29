@@ -13,79 +13,63 @@ APPLICATION_REJECT = "reject"
 
 
 class RolePayload(CallbackPayload):
-    """Выбор роли при старте регистрации."""
-
     value: str
 
 
 class AgreementPayload(CallbackPayload):
-    """Кнопка «Принять соглашение»."""
+    pass
 
 
 class CitySelectionPayload(CallbackPayload):
-    """Выбор города из списка найденных."""
-
     city_id: int
     city_name: str
 
 
 class SubjectSelectionPayload(CallbackPayload):
-    """Выбор региона (субъекта) из списка найденных."""
-
     subject_id: int
     subject_name: str
 
 
 class PartnerTypePayload(CallbackPayload):
-    """Выбор типа партнёра."""
-
     value: str
 
 
 class MyBonusesPayload(CallbackPayload):
-    """Кнопка «Мои бонусы» в меню ученика."""
+    pass
 
 
 class PartnerBonusesPayload(CallbackPayload):
-    """Кнопка «Мои бонусы» в меню коммерческого партнёра.
-
-    Отдельный payload, иначе хендлер ученика перехватывал бы
-    нажатие партнёра: роутеры подключаются в фиксированном порядке.
-    """
+    pass
 
 
 class AvailableBonusesPayload(CallbackPayload):
-    """Кнопка «Доступные бонусы» в меню ученика."""
+    pass
 
 
 class TakeBonusPayload(CallbackPayload):
-    """Кнопка получения бонуса под конкретным промокодом."""
-
     bonus_id: int
 
 
 class MyProgressPayload(CallbackPayload):
-    """Кнопка «Мой прогресс»."""
+    pass
 
 
 class AddBonusPayload(CallbackPayload):
-    """Кнопка «Добавить бонус»."""
+    pass
 
 
 class ApplicationsPayload(CallbackPayload):
-    """Кнопка «Список заявок»."""
+    pass
 
 
 class AddAdminPayload(CallbackPayload):
-    """Кнопка «Добавить админа»."""
+    pass
 
 
 class ApplicationDecisionPayload(CallbackPayload):
-    """Решение администратора по конкретной заявке."""
-
     application_id: int
     decision: str
 
 
 class BackPayload(CallbackPayload):
-    """Кнопка «Назад» — возврат в главное меню."""
+    pass

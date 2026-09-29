@@ -5,13 +5,13 @@ import sys
 from datetime import date, timedelta
 
 from mock_egas.models import Assignment, Day, Diary, Lesson
-from mock_egas.scenarios import SCENARIOS, WEEK_END, WEEK_START
+from mock_egas.scenarios import SCENARIOS, WEEK_END, WEEK_START, count_days_with_lessons
 
 VALID_MARKS: set[int | None] = {None, 2, 3, 4, 5}
 
 
 def validate_diary(diary: Diary, name: str = "diary") -> list[str]:
-    """Проверка инвариантов тестовых данных. Возвращает список проблем"""
+    """Проверяет инварианты дневника и отдаёт список найденных проблем"""
     problems: list[str] = []
 
     if diary.start != WEEK_START:
@@ -74,7 +74,7 @@ def validate_diary(diary: Diary, name: str = "diary") -> list[str]:
 
 
 def render_text(diary: Diary) -> str:
-    """Компактное текстовое представление дневника"""
+    """Отдаёт компактное текстовое представление дневника"""
     lines = [f"Неделя: {diary.start} — {diary.end}"]
     for day in diary.schedule:
         if not day.lessons:
@@ -105,7 +105,7 @@ def render_text(diary: Diary) -> str:
 
 
 def check_scenarios() -> list[str]:
-    """Проверка всех зарегистрированных сценариев"""
+    """Проверяет все зарегистрированные сценарии и отдаёт список сбоев"""
     failures: list[str] = []
     for name in SCENARIOS:
         try:
@@ -120,6 +120,7 @@ def check_scenarios() -> list[str]:
 
 
 def _main() -> int:
+    """Разбирает аргументы и печатает отчёт по сценариям"""
     if len(sys.argv) >= 2 and sys.argv[1] == "demo":
         from mock_egas.demo import main as demo_main
 
@@ -142,16 +143,21 @@ def _main() -> int:
         print(render_text(SCENARIOS[name]()))
         return 0
 
-    header = f"{'Сценарий':<24} {'дней с уроками':<15} {'уроков':<8}{'заданий':<9}{'оценок':<8}статус"
+    header = (
+        f"{'Сценарий':<24} {'дней с уроками':<15} "
+        f"{'уроков':<8}{'заданий':<9}{'оценок':<8}статус"
+    )
     print(header)
     print("-" * len(header))
+
     total_lessons = 0
     total_assignments = 0
     total_marks = 0
-    status_max = 0
+    failures: list[str] = []
+
     for name, factory in SCENARIOS.items():
         diary = factory()
-        days_with = sum(1 for day in diary.schedule if day.lessons)
+        days_with = count_days_with_lessons(diary)
         lessons = sum(len(day.lessons) for day in diary.schedule)
         assignments = sum(
             len(lesson.assignments)
@@ -162,23 +168,30 @@ def _main() -> int:
             1
             for day in diary.schedule
             for lesson in day.lessons
-            for a in lesson.assignments
-            if a.mark is not None
+            for assignment in lesson.assignments
+            if assignment.mark is not None
         )
         total_lessons += lessons
         total_assignments += assignments
         total_marks += marks
+
         problems = validate_diary(diary, name)
-        status = "OK" if not problems else "ОШИБКА"
-        status_max = max(status_max, len(problems))
-        print(f"{name:<24} {days_with:<15} {lessons:<8}{assignments:<9}{marks:<8}{status}")
+        if problems:
+            failures.append(f"{name}: " + "; ".join(problems))
+        status = "ОШИБКА" if problems else "OK"
+        print(
+            f"{name:<24} {days_with:<15} "
+            f"{lessons:<8}{assignments:<9}{marks:<8}{status}"
+        )
         for problem in problems:
             print(" " * 24 + "  ! " + problem)
-    print("-" * len(header))
-    print(f"Итого сценариев: {len(SCENARIOS)}, уроков: {total_lessons}, "
-          f"заданий: {total_assignments}, оценок: {total_marks}")
 
-    failures = check_scenarios()
+    print("-" * len(header))
+    print(
+        f"Итого сценариев: {len(SCENARIOS)}, уроков: {total_lessons}, "
+        f"заданий: {total_assignments}, оценок: {total_marks}"
+    )
+
     if failures:
         print("\nСЦЕНАРИИ НЕКОРРЕКТНЫ", file=sys.stderr)
         return 1

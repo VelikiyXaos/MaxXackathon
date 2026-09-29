@@ -15,10 +15,11 @@ from services.experience import calculate_and_save_school_experience
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_RUN_AT = time(0, 0)
+
+
 @dataclass
 class DailyUpdateReport:
-    """Итог одного ночного прогона"""
-
     students_total: int = 0
     students_updated: int = 0
     students_failed: int = 0
@@ -27,11 +28,12 @@ class DailyUpdateReport:
     bonus_links_revoked: int = 0
     errors: list[str] = field(default_factory=list)
 
+
 async def update_student_experience(
     student_id: int,
     provider: AbstractEgasConnector | None = None,
 ) -> int:
-    """Опрашивает ЭСУО об оценках одного студента и пересчитывает опыт"""
+    """Опрашивает ЭСУО об оценках студента и пересчитывает его опыт"""
     if provider is None:
         provider = await get_egas_connector(student_id)
 
@@ -51,23 +53,26 @@ async def update_all_students_grades(report: DailyUpdateReport) -> None:
     for student in students:
         try:
             xp = await update_student_experience(student.id)
-            report.students_updated += 1
-            report.xp_awarded += xp
         except Exception as exc:
             report.students_failed += 1
             report.errors.append(f"student {student.id}: {exc}")
             logger.exception("Не удалось обновить оценки студента %s", student.id)
+        else:
+            report.students_updated += 1
+            report.xp_awarded += xp
+
 
 async def expire_bonuses(
     report: DailyUpdateReport,
     *,
     today: date | None = None,
 ) -> None:
-    """Проверяет все существующие бонусы на истечение срока действия"""
+    """Удаляет бонусы с истёкшим сроком действия и считает отозванные выдачи"""
     current = today or date.today()
 
     async with session_scope() as session:
         expired = await bonus_crud.get_expired(session, date_now=current)
+
         for bonus in expired:
             bonus_id = bonus.id
             links = await student_bonus_crud.count_students_for_bonus(
@@ -82,14 +87,9 @@ async def expire_bonuses(
                 links,
             )
 
-async def run_daily_update() -> DailyUpdateReport:
-    """Выполняет полный цикл обновления: сроки бонусов → оценки/опыт
 
-    Выдачу бонусов ночной цикл не трогает: её инициирует сам
-    студент через бота (`services.bonuses.issue_bonus`). Автовыдача
-    забирала бы промокоды без действия студента и опустошала его
-    список «Доступные бонусы» (`services.bonuses.get_available_bonuses`).
-    """
+async def run_daily_update() -> DailyUpdateReport:
+    """Выполняет полный цикл: удаление истёкших бонусов и пересчёт опыта"""
     report = DailyUpdateReport()
     logger.info("Ежедневное обновление: старт")
 
@@ -113,8 +113,9 @@ async def run_daily_update() -> DailyUpdateReport:
     )
     return report
 
+
 def seconds_until(target: time, now: datetime | None = None) -> float:
-    """Сколько секунд до ближайшего наступления времени `target`"""
+    """Считает секунды до ближайшего наступления времени target"""
     current = now or datetime.now()
     next_run = datetime.combine(current.date(), target)
     if next_run <= current:
@@ -122,14 +123,15 @@ def seconds_until(target: time, now: datetime | None = None) -> float:
     return (next_run - current).total_seconds()
 
 
-async def daily_update_loop(run_at: time = time(0, 0)) -> None:
-    """Бесконечный цикл: запускает run_daily_update() каждый день в `run_at`"""
+async def daily_update_loop(run_at: time = DEFAULT_RUN_AT) -> None:
+    """Крутит бесконечный цикл, запуская обновление каждый день в run_at"""
     while True:
         delay = seconds_until(run_at)
+        next_run = datetime.now() + timedelta(seconds=delay)
         logger.info(
             "Следующее ежедневное обновление: через %.0f c (%s)",
             delay,
-            (datetime.now() + timedelta(seconds=delay)).isoformat(sep=" ", timespec="seconds"),
+            next_run.isoformat(sep=" ", timespec="seconds"),
         )
         await asyncio.sleep(delay)
         try:

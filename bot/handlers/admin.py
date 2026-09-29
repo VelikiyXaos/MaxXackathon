@@ -4,6 +4,7 @@ from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
+from bot.helpers import message_text
 from bot.keyboards import (
     admin_menu_keyboard,
     application_decision_keyboard,
@@ -24,27 +25,19 @@ router = Router(router_id="admin")
 logger = logging.getLogger(__name__)
 
 
-def _message_text(event: MessageCreated) -> str:
-    """Возвращает текст входящего сообщения (или пустую строку)."""
-    body = event.message.body
-    return body.text.strip() if body and body.text else ""
-
-
 async def _is_admin(event: MessageCallback | MessageCreated) -> bool:
-    """Проверяет, что пользователь является администратором."""
-    admin = await auth.get_admin(event.get_ids()[1] or 0)
-    return admin is not None
+    """Проверяет, что пользователь является администратором"""
+    return await auth.get_admin(event.get_ids()[1] or 0) is not None
 
 
 @router.message_callback(ApplicationsPayload.filter())
 async def on_applications(event: MessageCallback):
-    """Кнопка «Список заявок» — показываем все заявки с кнопками решения."""
+    """Показывает все заявки с кнопками решения"""
     if not await _is_admin(event):
         await event.send(text=messages.ACCESS_DENIED)
         return
 
     items = await applications.get_applications()
-
     if not items:
         await event.send(text=messages.APPLICATIONS_EMPTY)
         return
@@ -68,7 +61,7 @@ async def on_application_decision(
     event: MessageCallback,
     payload: ApplicationDecisionPayload,
 ):
-    """Кнопки «Принять»/«Отклонить» по конкретной заявке."""
+    """Принимает или отклоняет выбранную заявку"""
     if not await _is_admin(event):
         await event.send(text=messages.ACCESS_DENIED)
         return
@@ -87,7 +80,7 @@ async def on_application_decision(
 
 @router.message_callback(AddAdminPayload.filter())
 async def on_add_admin(event: MessageCallback, context):
-    """Кнопка «Добавить админа» — запрашиваем ID пользователя."""
+    """Запрашивает ID пользователя для добавления в администраторы"""
     if not await _is_admin(event):
         await event.send(text=messages.ACCESS_DENIED)
         return
@@ -98,38 +91,32 @@ async def on_add_admin(event: MessageCallback, context):
 
 @router.message_created(states=AdminAdding.WAIT_USER_ID)
 async def on_admin_id_input(event: MessageCreated, context):
-    """Ввод ID пользователя — добавляем администратора."""
+    """Добавляет администратора по введённому ID"""
     if not await _is_admin(event):
         await context.clear()
         await event.message.answer(text=messages.ACCESS_DENIED)
         return
 
-    text = _message_text(event)
     try:
-        user_id = int(text)
+        user_id = int(message_text(event))
     except ValueError:
         await event.message.answer(text=messages.ADMIN_ID_INVALID)
         return
-    
+
     if user_id <= 0:
         await event.message.answer(text=messages.ADMIN_ID_INVALID)
         return
 
     try:
         await applications.add_admin(user_id)
-    except applications.AdminAddingError as e:
+    except applications.AdminAddingError as exc:
         await event.message.answer(
-            text=messages.ADMIN_ALREADY_EXISTS.format(user_id=e.max_id),
+            text=messages.ADMIN_ALREADY_EXISTS.format(user_id=exc.max_id),
             attachments=[back_keyboard()],
         )
         return
     except Exception as exc:
-        logger.error(
-            "Не удалось добавить администратора %s: %s",
-            user_id,
-            exc,
-            exc_info=exc,
-        )
+        logger.error("Не удалось добавить администратора %s: %s", user_id, exc)
         await event.message.answer(
             text=messages.ADMIN_NOT_ADDED,
             attachments=[back_keyboard()],

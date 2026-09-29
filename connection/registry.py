@@ -49,9 +49,10 @@ def register_connector(
 
 
 def _iter_connector_classes() -> Iterator[type[AbstractEgasConnector]]:
-    """Неабстрактные классы коннекторов, объявленные в `connection/connectors/`"""
+    """Отдаёт неабстрактные классы из пакета connection/connectors"""
     seen: set[type] = set()
     stack: list[type] = [AbstractEgasConnector]
+
     while stack:
         base = stack.pop()
         for subclass in base.__subclasses__():
@@ -59,6 +60,7 @@ def _iter_connector_classes() -> Iterator[type[AbstractEgasConnector]]:
                 continue
             seen.add(subclass)
             stack.append(subclass)
+
             if inspect.isabstract(subclass):
                 continue
             if not subclass.__module__.startswith(CONNECTORS_PACKAGE + "."):
@@ -66,8 +68,10 @@ def _iter_connector_classes() -> Iterator[type[AbstractEgasConnector]]:
             yield subclass
 
 
-def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnector]]:
-    """Импортирует модули из `connection/connectors/` и наполняет реестр"""
+def load_connectors(
+    *, force: bool = False
+) -> dict[str, type[AbstractEgasConnector]]:
+    """Импортирует модули из connection/connectors и наполняет реестр"""
     global _loaded
     if _loaded and not force:
         return dict(_CONNECTORS)
@@ -79,7 +83,7 @@ def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnec
         try:
             importlib.import_module(module_name)
         except Exception:
-            logger.exception("Не удалось импортировать модуль коннектора %s", module_name)
+            logger.exception("Не удалось импортировать модуль %s", module_name)
 
     for connector_cls in _iter_connector_classes():
         try:
@@ -93,7 +97,7 @@ def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnec
 
 
 def get_connector_class(name: str) -> type[AbstractEgasConnector]:
-    """Возвращает класс коннектора по имени из `EGAS.API_file`"""
+    """Возвращает класс коннектора по имени из EGAS.API_file"""
     load_connectors()
 
     connector_cls = _CONNECTORS.get(name)
@@ -108,5 +112,5 @@ def get_connector_class(name: str) -> type[AbstractEgasConnector]:
 
 
 def registered_connectors() -> dict[str, type[AbstractEgasConnector]]:
-    """Текущее содержимое реестра"""
+    """Отдаёт текущее содержимое реестра"""
     return load_connectors()

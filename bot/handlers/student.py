@@ -2,6 +2,7 @@ from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
+from bot.helpers import bonus_line, message_text
 from bot.keyboards import (
     available_bonus_keyboard,
     back_keyboard,
@@ -21,38 +22,41 @@ from bot.payloads import (
 from bot.states import StudentRegistration
 from services import auth, bonuses, progress, registration
 
-
-
 router = Router(router_id="student")
 
 
-def _message_text(event: MessageCreated) -> str:
-    """Возвращает текст входящего сообщения (или пустую строку)."""
-    body = event.message.body
-    return body.text.strip() if body and body.text else ""
+async def _resolve_city_from_subject(event, context, subject_id: int, query: str):
+    """Ищет город в выбранном регионе и переходит к выбору учреждения"""
+    cities = await registration.search_cities_in_subject(subject_id, query)
 
+    if not cities:
+        await event.send(text=messages.CITY_NOT_FOUND)
+        return
 
-def _bonus_line(bonus: dict) -> str:
-    """Форматирует один бонус для вывода списком."""
-    return messages.BONUS_LINE_TEMPLATE.format(
-        name=bonus.get("name") or messages.BONUS_NO_NAME,
-        promocode=bonus.get("promocode", ""),
-        level=bonus.get("level", 0),
-        end_date=bonus.get("end_date") or messages.BONUS_NO_DEADLINE,
+    if len(cities) == 1:
+        await context.update_data(city_id=cities[0].id_)
+        await context.set_state(StudentRegistration.INSTITUTION)
+        await event.send(text=messages.INSTITUTION_REQUEST)
+        return
+
+    await context.set_state(StudentRegistration.CITY_CHOICE)
+    await event.send(
+        text=messages.REGION_SELECTION,
+        attachments=[city_selection_keyboard(cities)],
     )
 
 
 @router.message_callback(AgreementPayload.filter())
 async def on_accept_agreement(event: MessageCallback, context):
-    """Соглашение принято — запрашиваем город."""
+    """Соглашение принято: запрашиваем город"""
     await context.set_state(StudentRegistration.CITY)
     await event.send(text=messages.CITY_REQUEST)
 
 
 @router.message_created(states=StudentRegistration.CITY)
 async def on_city_input(event: MessageCreated, context):
-    """Шаг 1: по названию города ищем регионы (субъекты), где он есть."""
-    query = _message_text(event)
+    """Ищет регионы, в которых есть город с таким названием"""
+    query = message_text(event)
     subjects = await registration.search_subjects_by_city(query)
 
     if not subjects:
@@ -78,37 +82,23 @@ async def on_subject_selected(
     payload: SubjectSelectionPayload,
     context,
 ):
-    """Регион выбран из списка — ищем город внутри него."""
+    """Регион выбран из списка: ищем город внутри него"""
     data = await context.get_data()
     await _resolve_city_from_subject(
         event, context, payload.subject_id, data.get("city_query", "")
     )
 
 
-async def _resolve_city_from_subject(event, context, subject_id: int, query: str):
-    """Шаг 2: ищет город в выбранном регионе и переходит к учреждению."""
-    cities = await registration.search_cities_in_subject(subject_id, query)
-
-    if not cities:
-        await event.send(text=messages.CITY_NOT_FOUND)
-        return
-
-    if len(cities) == 1:
-        await context.update_data(city_id=cities[0].id_)
-        await context.set_state(StudentRegistration.INSTITUTION)
-        await event.send(text=messages.INSTITUTION_REQUEST)
-        return
-
-    await context.set_state(StudentRegistration.CITY_CHOICE)
-    await event.send(
-        text=messages.REGION_SELECTION,
-        attachments=[city_selection_keyboard(cities)],
-    )
-
-
-@router.message_callback(CitySelectionPayload.filter(), states=StudentRegistration.CITY_CHOICE)
-async def on_city_selected(event: MessageCallback, payload: CitySelectionPayload, context):
-    """Город выбран из списка — запрашиваем учреждение."""
+@router.message_callback(
+    CitySelectionPayload.filter(),
+    states=StudentRegistration.CITY_CHOICE,
+)
+async def on_city_selected(
+    event: MessageCallback,
+    payload: CitySelectionPayload,
+    context,
+):
+    """Город выбран из списка: запрашиваем учреждение"""
     await context.update_data(city_id=payload.city_id)
     await context.set_state(StudentRegistration.INSTITUTION)
     await event.send(text=messages.INSTITUTION_REQUEST)
@@ -116,8 +106,8 @@ async def on_city_selected(event: MessageCallback, payload: CitySelectionPayload
 
 @router.message_created(states=StudentRegistration.INSTITUTION)
 async def on_institution_input(event: MessageCreated, context):
-    """Обработка ввода образовательного учреждения."""
-    query = _message_text(event)
+    """Ищет образовательное учреждение по введённому названию"""
+    query = message_text(event)
     institutions = await registration.search_institutions(query)
 
     if not institutions:
@@ -131,25 +121,24 @@ async def on_institution_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.FIO)
 async def on_fio_input(event: MessageCreated, context):
-    """ФИО принято — запрашиваем год."""
-    await context.update_data(fio=_message_text(event))
+    """ФИО принято: запрашиваем год обучения"""
+    await context.update_data(fio=message_text(event))
     await context.set_state(StudentRegistration.YEAR)
     await event.message.answer(text=messages.YEAR_REQUEST)
 
 
 @router.message_created(states=StudentRegistration.YEAR)
 async def on_year_input(event: MessageCreated, context):
-    """Год принят — запрашиваем класс."""
-    year_text = _message_text(event)
+    """Год принят: запрашиваем класс"""
     try:
-        year = int(year_text)
+        year = int(message_text(event))
     except ValueError:
-        year = 0 
+        year = 0
 
-    if year < 1 or year > 11:
-        await event.message.answer (text=messages.YEAR_INVALID)
+    if not 1 <= year <= 11:
+        await event.message.answer(text=messages.YEAR_INVALID)
         return
-    
+
     await context.update_data(year=year)
     await context.set_state(StudentRegistration.GROUP)
     await event.message.answer(text=messages.GROUP_REQUEST)
@@ -157,16 +146,16 @@ async def on_year_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.GROUP)
 async def on_group_input(event: MessageCreated, context):
-    """Класс принята — запрашиваем логин."""
-    await context.update_data(group=_message_text(event))
+    """Класс принят: запрашиваем логин"""
+    await context.update_data(group=message_text(event))
     await context.set_state(StudentRegistration.LOGIN)
     await event.message.answer(text=messages.LOGIN_REQUEST)
 
 
 @router.message_created(states=StudentRegistration.LOGIN)
 async def on_login_input(event: MessageCreated, context):
-    """Логин принят — проверяем доступность и запрашиваем пароль."""
-    login = _message_text(event)
+    """Логин принят: проверяем занятость и запрашиваем пароль"""
+    login = message_text(event)
 
     if await auth.is_login_taken(login):
         await event.message.answer(text=messages.LOGIN_TAKEN)
@@ -179,9 +168,9 @@ async def on_login_input(event: MessageCreated, context):
 
 @router.message_created(states=StudentRegistration.PASSWORD)
 async def on_password_input(event: MessageCreated, context):
-    """Пароль принят — завершаем регистрацию и показываем меню учащегося."""
+    """Пароль принят: завершаем регистрацию и открываем меню"""
     data = await context.get_data()
-    password = _message_text(event)
+    password = message_text(event)
     await context.update_data(password=password)
 
     try:
@@ -195,10 +184,10 @@ async def on_password_input(event: MessageCreated, context):
             login=data.get("login", ""),
             password=password,
         )
-    except registration.RegistrationError as e:
-        await event.message.answer(text=str(e))
+    except registration.RegistrationError as exc:
+        await event.message.answer(text=str(exc))
         return
-    
+
     await context.clear()
     await event.message.answer(
         text=messages.STUDENT_REGISTERED.format(
@@ -210,64 +199,55 @@ async def on_password_input(event: MessageCreated, context):
 
 @router.message_callback(MyBonusesPayload.filter())
 async def on_my_bonuses(event: MessageCallback):
-    """Кнопка «Мои бонусы» в меню учащегося."""
+    """Показывает бонусы, полученные учеником"""
     user_id = event.get_ids()[1] or 0
-    student = await auth.get_student(user_id)
-    if student is None:
+    if await auth.get_student(user_id) is None:
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 
     items = await bonuses.get_student_bonuses(user_id)
-
     if not items:
         await event.send(
             text=messages.MY_BONUSES_EMPTY,
             attachments=[back_keyboard()],
         )
-    else:
-        lines = [f"• {_bonus_line(item)}" for item in items]
-        await event.send(
-            text=messages.MY_BONUSES_TEMPLATE.format(
-                bonuses="\n".join(lines)
-            ),
-            attachments=[back_keyboard()],
-        )
+        return
+
+    lines = "\n".join(f"• {bonus_line(item)}" for item in items)
+    await event.send(
+        text=messages.MY_BONUSES_TEMPLATE.format(bonuses=lines),
+        attachments=[back_keyboard()],
+    )
 
 
 @router.message_callback(AvailableBonusesPayload.filter())
 async def on_available_bonuses(event: MessageCallback):
-    """Кнопка «Доступные бонусы» — что можно получить при текущем опыте."""
+    """Показывает бонусы, доступные при текущем опыте"""
     user_id = event.get_ids()[1] or 0
-    student = await auth.get_student(user_id)
-    if student is None:
+    if await auth.get_student(user_id) is None:
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 
     items = await bonuses.get_available_bonuses(user_id)
-
     if not items:
         await event.send(
             text=messages.AVAILABLE_BONUSES_EMPTY,
             attachments=[back_keyboard()],
         )
-    else:
-        lines = [f"• {_bonus_line(item)}" for item in items]
-        await event.send(
-            text=messages.AVAILABLE_BONUSES_TEMPLATE.format(
-                bonuses="\n".join(lines)
-            ),
-            attachments=[available_bonus_keyboard(items)],
-        )
+        return
+
+    lines = "\n".join(f"• {bonus_line(item)}" for item in items)
+    await event.send(
+        text=messages.AVAILABLE_BONUSES_TEMPLATE.format(bonuses=lines),
+        attachments=[available_bonus_keyboard(items)],
+    )
 
 
 @router.message_callback(TakeBonusPayload.filter())
-async def on_take_bonus(
-    event: MessageCallback, payload: TakeBonusPayload
-):
-    """Кнопка «Получить» — выдаём бонус и показываем промокод."""
+async def on_take_bonus(event: MessageCallback, payload: TakeBonusPayload):
+    """Выдаёт бонус и показывает его промокод"""
     user_id = event.get_ids()[1] or 0
-    student = await auth.get_student(user_id)
-    if student is None:
+    if await auth.get_student(user_id) is None:
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 
@@ -285,10 +265,9 @@ async def on_take_bonus(
 
 @router.message_callback(MyProgressPayload.filter())
 async def on_my_progress(event: MessageCallback):
-    """Кнопка «Мой прогресс» в меню учащегося."""
+    """Показывает опыт, уровень и шкалу прогресса"""
     user_id = event.get_ids()[1] or 0
-    student = await auth.get_student(user_id)
-    if student is None:
+    if await auth.get_student(user_id) is None:
         await event.send(text=messages.UNKNOWN_COMMAND)
         return
 

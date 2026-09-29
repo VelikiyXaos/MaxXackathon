@@ -28,7 +28,7 @@ INT32_MAX = 2_147_483_647
 
 
 def _int_env(name: str, default: int) -> int:
-    """Читает целое из окружения, проверяя попадание в `Integer` (int32)"""
+    """Читает целое из окружения, проверяя попадание в Integer (int32)"""
     raw = os.getenv(name)
     if not raw:
         return default
@@ -46,6 +46,7 @@ def _int_env(name: str, default: int) -> int:
 
 
 async def _ensure_subject_and_city() -> tuple[int, int]:
+    """Создаёт тестовые субъект РФ и город, отдавая их id"""
     async with session_scope() as session:
         subject = await subject_crud.get_by_name(session, TEST_SUBJECT)
         if subject is None:
@@ -63,7 +64,8 @@ async def _ensure_subject_and_city() -> tuple[int, int]:
 
 
 async def _ensure_school(city_id: int) -> int:
-    name = f"Школа №1"
+    """Создаёт тестовую школу в городе и отдаёт её id"""
+    name = "Школа №1"
     async with session_scope() as session:
         school = await ei_crud.get_by_name(session, name)
         if school is None:
@@ -81,7 +83,8 @@ async def _ensure_school(city_id: int) -> int:
 
 
 async def _ensure_partner() -> int:
-    name = f"Партнёр"
+    """Создаёт тестового партнёра и отдаёт его id"""
+    name = "Партнёр"
     max_id = _int_env("TEST_PARTNER_MAX_ID", DEFAULT_TEST_PARTNER_MAX_ID)
     async with session_scope() as session:
         partner = await partner_crud.get_by_name(session, name)
@@ -108,6 +111,7 @@ async def _ensure_partner() -> int:
 
 
 async def _ensure_bonuses(partner_id: int) -> int:
+    """Создаёт бонусы на каждый уровень и отдаёт число созданных"""
     created = 0
     async with session_scope() as session:
         for level in range(1, MAX_LEVEL + 1):
@@ -130,7 +134,8 @@ async def _ensure_bonuses(partner_id: int) -> int:
 
 
 async def _ensure_mock_egas(school_id: int) -> int:
-    name = f"ЭСУО-имитация (mock_egas)"
+    """Создаёт тестовую ЭСУО-имитацию, подключая её к школе"""
+    name = "ЭСУО-имитация (mock_egas)"
     async with session_scope() as session:
         egas = await egas_crud.get_by_name(session, name)
         if egas is None:
@@ -160,6 +165,7 @@ async def _ensure_mock_egas(school_id: int) -> int:
 
 
 async def main() -> int:
+    """Настраивает логи и наполняет базу тестовыми данными"""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s"
     )
@@ -170,5 +176,10 @@ async def main() -> int:
     bonuses = await _ensure_bonuses(partner_id)
     await _ensure_mock_egas(school_id)
 
-    logger.info("Тестовые данные готовы: школа=%d, партнёр=%d, бонусов +%d", school_id, partner_id, bonuses)
+    logger.info(
+        "Тестовые данные готовы: школа=%d, партнёр=%d, бонусов +%d",
+        school_id,
+        partner_id,
+        bonuses,
+    )
     return 0

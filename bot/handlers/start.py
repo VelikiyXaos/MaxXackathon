@@ -23,10 +23,7 @@ router = Router(router_id="start")
 
 
 def _welcome_text(profile: auth.UserProfile) -> str:
-    """Приветствие для роли пользователя: с именем, если оно есть.
-
-    Если роль None — предложить выбор роли (регистрация).
-    """
+    """Приветствие под роль пользователя"""
     if profile.role is None:
         return messages.START_NOT_AUTHORIZED
     if profile.role == ROLE_ADMIN:
@@ -37,18 +34,14 @@ def _welcome_text(profile: auth.UserProfile) -> str:
 
 
 async def _role_entry(user_id: int) -> tuple[str, object]:
-    """Возвращает приветствие и клавиатуру для роли.
-
-    Кнопка /start не показывается ни в приветствии, ни в главном
-    меню: её предлагает только подсказка для невнятного ввода.
-    """
+    """Возвращает приветствие и клавиатуру под роль пользователя"""
     profile = await auth.get_user_profile(user_id)
     return _welcome_text(profile), role_keyboard(profile.role)
 
 
 @router.bot_started()
 async def bot_started(event: BotStarted, context):
-    """Срабатывает при первом открытии бота (reply-кнопка «Начать»)."""
+    """Первое открытие бота из reply-кнопки «Начать»"""
     await context.clear()
     text, keyboard = await _role_entry(event.user.user_id)
     await event.send(text=text, attachments=[keyboard])
@@ -56,10 +49,7 @@ async def bot_started(event: BotStarted, context):
 
 @router.message_created(CommandStart())
 async def start_command(event: MessageCreated, context):
-    """Сбрасывает состояние и открывает стартовый экран.
-
-    Повторный /start очищает незавершённую регистрацию и начинает заново.
-    """
+    """Сбрасывает состояние и открывает стартовый экран"""
     await context.clear()
     text, keyboard = await _role_entry(event.get_ids()[1] or 0)
     await event.message.answer(text=text, attachments=[keyboard])
@@ -67,13 +57,7 @@ async def start_command(event: MessageCreated, context):
 
 @router.message_created(None)
 async def on_unknown_message(event: MessageCreated):
-    """Текст вне сценария — подсказка с кнопкой /start.
-
-    None в фильтре состояний означает «состояние не задано», поэтому
-    хендлер не перехватывает шаги регистрации: у них состояние задано.
-    Зарегистрирован после start_command, чтобы /start обрабатывался
-    как команда, а не как незнакомый текст.
-    """
+    """Текст вне сценария: подсказка с кнопкой /start"""
     await event.message.answer(
         text=messages.UNKNOWN_COMMAND,
         attachments=[home_keyboard()],
@@ -82,8 +66,7 @@ async def on_unknown_message(event: MessageCreated):
 
 @router.message_callback(RolePayload.filter())
 async def on_role_selection(event: MessageCallback, payload: RolePayload, context):
-    """Начало регистрации в зависимости от выбранной роли."""
-    
+    """Начинает регистрацию в зависимости от выбранной роли"""
     user_id = event.get_ids()[1] or 0
     profile = await auth.get_user_profile(user_id)
     if profile.role is not None:
@@ -92,7 +75,7 @@ async def on_role_selection(event: MessageCallback, payload: RolePayload, contex
             attachments=[role_keyboard(profile.role)],
         )
         return
-    
+
     if payload.value == ROLE_STUDENT:
         await context.set_state(StudentRegistration.AGREEMENT)
         await event.send(
@@ -109,9 +92,10 @@ async def on_role_selection(event: MessageCallback, payload: RolePayload, contex
 
 @router.message_callback(BackPayload.filter())
 async def on_back(event: MessageCallback, context):
-    """Кнопка «Назад» — возвращаем главное меню по роли пользователя."""
+    """Возвращает главное меню по роли пользователя"""
     await context.clear()
     profile = await auth.get_user_profile(event.get_ids()[1] or 0)
     await event.send(
-        text=messages.MAIN_MENU, attachments=[role_keyboard(profile.role)]
+        text=messages.MAIN_MENU,
+        attachments=[role_keyboard(profile.role)],
     )

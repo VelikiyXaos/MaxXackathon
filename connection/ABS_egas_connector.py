@@ -8,8 +8,6 @@ GradesCount = dict[int, int]
 
 
 class AbstractEgasConnector(ABC):
-    """Опрашивает ЭСУО об оценках одного ученика за текущий учебный год"""
-
     GRADE_TYPES: ClassVar[tuple[int, ...]] = (1, 2, 3, 4, 5)
 
     code: ClassVar[str] = ""
@@ -45,7 +43,7 @@ class AbstractEgasConnector(ABC):
         student_id: int,
         today: date | None = None,
     ) -> GradesCount:
-        """Возвращает {тип_оценки: кол-во} за период с 1 сентября текущего уч. года до текущей даты"""
+        """Считает оценки с 1 сентября текущего учебного года по текущую дату"""
         period_start, period_end = self._academic_year_period(today or self._today)
         raw_grades = await self._fetch_grades(
             student_id=student_id,
@@ -61,7 +59,7 @@ class AbstractEgasConnector(ABC):
         await self.aclose()
 
     async def aclose(self) -> None:
-        """Освобождает внешние ресурсы коннектора (сессии, сокеты)"""
+        """Освобождает внешние ресурсы коннектора"""
         await self._release()
 
     @abstractmethod
@@ -76,20 +74,19 @@ class AbstractEgasConnector(ABC):
         date_from: date,
         date_to: date,
     ) -> list[int]:
-        """Возвращает список оценок за период — разбор формата своей ЭСУО"""
+        """Возвращает список оценок за период"""
 
     async def _release(self) -> None:
-        """Завершает сессию ЭСУО, если она была открыта. По умолчанию ничего"""
-        return None
+        """Закрывает сессию ЭСУО, если она была открыта"""
 
     @staticmethod
     def _academic_year_period(today: date) -> tuple[date, date]:
-        """Границы текущего учебного года: с 1 сентября по текущую дату"""
+        """Отдаёт границы текущего учебного года: с 1 сентября по сегодня"""
         year = today.year if today.month >= 9 else today.year - 1
         return date(year, 9, 1), today
 
     def _count_grades(self, raw_grades: list[int]) -> GradesCount:
-        """Список оценок → {оценка: количество} по GRADE_TYPES"""
+        """Собирает список оценок в словарь {оценка: количество}"""
         counts: GradesCount = {grade: 0 for grade in self.GRADE_TYPES}
         for grade in raw_grades:
             if grade in counts:

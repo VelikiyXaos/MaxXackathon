@@ -10,6 +10,7 @@ logger = logging.getLogger("seed_base")
 
 
 async def seed_subjects() -> tuple[int, int]:
+    """Добавляет в базу справочник субъектов РФ и отдаёт счётчики"""
     created = 0
     existed = 0
 
@@ -42,6 +43,7 @@ async def seed_subjects() -> tuple[int, int]:
 
 
 async def main() -> int:
+    """Настраивает логи и наполняет базу справочником субъектов РФ"""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(message)s"
     )

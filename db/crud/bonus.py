@@ -1,5 +1,3 @@
-#crud
-
 from datetime import date
 
 from sqlalchemy import select
@@ -17,7 +15,7 @@ async def create(
     partner_id: int,
     end_date: date | None = None,
 ) -> Bonus:
-    """Создаёт новый бонус и возвращает его"""
+    """Создаёт бонус и возвращает его"""
     bonus = Bonus(
         name=name,
         promocode=promocode,
@@ -77,7 +75,7 @@ async def get_available(
 async def get_expired(
     session: AsyncSession, *, date_now: date | None = None
 ) -> list[Bonus]:
-    """Возвращает бонусы, у которых истёк срок действия"""
+    """Возвращает бонусы с истёкшим сроком действия"""
     timestamp = date_now or date.today()
     result = await session.execute(
         select(Bonus).where(
@@ -93,7 +91,7 @@ async def update(
     bonus_id: int,
     **fields: object,
 ) -> Bonus | None:
-    """Обновляет указанные поля бонуса и возвращает его или None"""
+    """Обновляет указанные поля бонуса"""
     bonus = await session.get(Bonus, bonus_id)
     if bonus is None:
         return None
@@ -105,7 +103,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, bonus_id: int) -> bool:
-    """Удаляет бонус по id. Возвращает True, если запись удалена"""
+    """Удаляет бонус по id, True если запись была"""
     bonus = await session.get(Bonus, bonus_id)
     if bonus is None:
         return False

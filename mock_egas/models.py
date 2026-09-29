@@ -20,15 +20,17 @@ ASSIGNMENT_TYPE_IDS: dict[str, int] = {
 }
 
 def _date_iso(value: date) -> str:
+    """Отдаёт дату в формате ЭСУО"""
     return value.isoformat()
 
+
 def _time_iso(value: time | None) -> str:
+    """Отдаёт время в формате ЭСУО или пустую строку"""
     return value.strftime("%H:%M") if value is not None else ""
+
 
 @dataclass
 class Assignment:
-    """Задание: домашнее задание, контрольная, ответ на уроке и т.п"""
-
     id: int
     comment: str
     type: str
@@ -38,6 +40,7 @@ class Assignment:
     deadline: date
 
     def to_dict(self) -> dict:
+        """Отдаёт задание в виде словаря"""
         return {
             "id": self.id,
             "comment": self.comment,
@@ -49,6 +52,7 @@ class Assignment:
         }
 
     def to_raw(self) -> dict:
+        """Отдаёт задание в формате ответа ЭСУО"""
         raw: dict = {
             "id": self.id,
             "assignmentName": self.content,
@@ -65,8 +69,6 @@ class Assignment:
 
 @dataclass
 class Lesson:
-    """Урок в расписании (один день, один предмет следующий по номеру)"""
-
     day: date
     start: time
     end: time
@@ -76,6 +78,7 @@ class Lesson:
     assignments: list[Assignment] = field(default_factory=list)
 
     def to_dict(self) -> dict:
+        """Отдаёт урок в виде словаря"""
         return {
             "day": self.day,
             "start": self.start,
@@ -87,6 +90,7 @@ class Lesson:
         }
 
     def to_raw(self) -> dict:
+        """Отдаёт урок в формате ответа ЭСУО"""
         return {
             "day": _date_iso(self.day),
             "startTime": _time_iso(self.start),
@@ -100,18 +104,18 @@ class Lesson:
 
 @dataclass
 class Day:
-    """Один день недели в дневнике (может быть без уроков)"""
-
     lessons: list[Lesson]
     day: date
 
     def to_dict(self) -> dict:
+        """Отдаёт день в виде словаря"""
         return {
             "lessons": [lesson.to_dict() for lesson in self.lessons],
             "day": self.day,
         }
 
     def to_raw(self) -> dict:
+        """Отдаёт день в формате ответа ЭСУО"""
         return {
             "lessons": [lesson.to_raw() for lesson in self.lessons],
             "date": _date_iso(self.day),
@@ -120,13 +124,12 @@ class Day:
 
 @dataclass
 class Diary:
-    """Дневник за одну неделю: расписание с заданиями и оценками"""
-
     start: date
     end: date
     schedule: list[Day]
 
     def to_dict(self) -> dict:
+        """Отдаёт дневник в виде словаря"""
         return {
             "start": self.start,
             "end": self.end,
@@ -134,6 +137,7 @@ class Diary:
         }
 
     def to_raw(self) -> dict:
+        """Отдаёт дневник в формате ответа ЭСУО"""
         return {
             "weekStart": _date_iso(self.start),
             "weekEnd": _date_iso(self.end),

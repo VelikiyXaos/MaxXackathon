@@ -1,5 +1,3 @@
-#crud
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +10,7 @@ async def create(
     name: str,
     max_id: int,
 ) -> Partner:
-    """Создаёт нового партнёра и возвращает его"""
+    """Создаёт партнёра и возвращает его"""
     partner = Partner(name=name, max_id=max_id)
     session.add(partner)
     await session.commit()
@@ -36,7 +34,7 @@ async def update(
     partner_id: int,
     **fields: object,
 ) -> Partner | None:
-    """Обновляет указанные поля партнёра и возвращает его или None"""
+    """Обновляет указанные поля партнёра"""
     partner = await session.get(Partner, partner_id)
     if partner is None:
         return None
@@ -48,7 +46,7 @@ async def update(
 
 
 async def get_by_max_id(session: AsyncSession, max_id: int) -> Partner | None:
-    """Возвращает партнёра по внешнему id (max_id) или None"""
+    """Возвращает партнёра по внешнему id или None"""
     result = await session.execute(
         select(Partner).where(Partner.max_id == max_id)
     )
@@ -62,7 +60,7 @@ async def get_by_name(session: AsyncSession, name: str) -> Partner | None:
 
 
 async def delete(session: AsyncSession, partner_id: int) -> bool:
-    """Удаляет партнёра по id. Возвращает True, если запись удалена"""
+    """Удаляет партнёра по id, True если запись была"""
     partner = await session.get(Partner, partner_id)
     if partner is None:
         return False

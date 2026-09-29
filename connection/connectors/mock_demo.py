@@ -1,27 +1,3 @@
-"""Демонстрационный коннектор ЭСУО: оценки из тестовых сценариев mock_egas.
-
-Подключается штатно, без единой правки фабрики и реестра:
-
-    python -m mock_egas demo on     # EGAS.API_file = 'MockEgasConnector'
-    python -m mock_egas demo off    # вернуть NetSchoolConnector
-
-Модуль лежит в `connection/connectors/`, поэтому `registry.load_connectors()`
-подхватывает класс сам, а `connection.factory.get_egas_connector()` создаёт
-его по строке из БД.
-
-Как получаются «разные данные каждый день»:
-
-* оценки детерминированы датой — один и тот же день всегда даёт один и тот
-  же набор, поэтому ночной прогон в 00:00 идемпотентен (повторный запуск
-  ничего не начисляет сверх нового);
-* набор сценариев буднего дня меняется каждую неделю, поэтому в новый день
-  опыт растёт, а в выходные (`week_without_lessons`) не меняется;
-* период берётся из базового класса: 1 сентября → сегодняшний день, то есть
-  с каждым днём в выдачу попадает новая порция оценок.
-
-Логины/пароли не проверяются: фейковая ЭСУО не ходит в сеть.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -33,14 +9,12 @@ from mock_egas import scenario
 
 logger = logging.getLogger(__name__)
 
-#: Сценарий выходных: уроков нет → новых оценок нет → опыт не растёт.
 WEEKEND_SCENARIO = "week_without_lessons"
 
-#: Сценарии-кандидаты. Сценарии `mock_egas` проверяют парсинг краевых
-#: случаев, поэтому оценок в них немного: год оценок они не моделируют.
-#: Коннектор берёт из сценария оценки ближайшего дня, где они есть, и
-#: повторяет их по кругу — так будний день почти всегда приносит новые
-#: оценки, а набор меняется каждую неделю (шаг ротации — неделя календаря).
+BASE_LOAD = 1
+EXTRA_LOAD = 1
+WEEK_STEP_LOAD = 1
+
 CANDIDATE_SCENARIOS: tuple[str, ...] = (
     "regular_week",
     "graded_week",
@@ -56,13 +30,36 @@ CANDIDATE_SCENARIOS: tuple[str, ...] = (
 
 _POOL_CACHE: tuple[str, ...] | None = None
 _MARKS_CACHE: dict[str, tuple[tuple[int, ...], ...]] = {}
+_RUN_START: date | None = None
+
+
+def set_run_start(value: date | None) -> None:
+    """Задаёт или сбрасывает первую ночь симуляции обновлений"""
+    global _RUN_START
+    _RUN_START = value
+
+
+def daily_load(day: date) -> int:
+    """Отдаёт, во сколько раз фейковая ЭСУО выдаёт больше оценок в этот день
+
+    Первая ночь симуляции даёт базовую нагрузку, каждая следующая — больше,
+    а раз в неделю нагрузка растёт ещё на одну порцию. Дни до начала
+    симуляции остаются базовыми, чтобы накопленный опыт не обнулялся.
+    """
+    if _RUN_START is None or day < _RUN_START:
+        return BASE_LOAD
+    passed = (day - _RUN_START).days
+    if passed == 0:
+        return BASE_LOAD
+    return BASE_LOAD + EXTRA_LOAD + (passed - 1) // 7 * WEEK_STEP_LOAD
 
 
 def _marked_days(name: str) -> tuple[tuple[int, ...], ...]:
-    """Оценки сценария, сгруппированные по дням недели (без пустых дней)."""
+    """Группирует оценки сценария по дням недели, пустые дни отбрасывая"""
     cached = _MARKS_CACHE.get(name)
     if cached is not None:
         return cached
+
     per_weekday: list[list[int]] = [[] for _ in range(7)]
     for diary_day in scenario(name).schedule:
         weekday = diary_day.day.weekday()
@@ -70,13 +67,14 @@ def _marked_days(name: str) -> tuple[tuple[int, ...], ...]:
             for assignment in lesson.assignments:
                 if assignment.mark is not None:
                     per_weekday[weekday].append(assignment.mark)
+
     result = tuple(tuple(marks) for marks in per_weekday if marks)
     _MARKS_CACHE[name] = result
     return result
 
 
 def _pool() -> tuple[str, ...]:
-    """Сценарии, у которых есть хотя бы одна оценка."""
+    """Отдаёт сценарии, у которых есть хотя бы одна оценка"""
     global _POOL_CACHE
     if _POOL_CACHE is None:
         _POOL_CACHE = tuple(
@@ -86,9 +84,10 @@ def _pool() -> tuple[str, ...]:
 
 
 def scenario_for_day(day: date) -> str:
-    """Имя сценария `mock_egas`, который отдаёт оценки за `day`."""
+    """Выбирает сценарий mock_egas, который отдаёт оценки за этот день"""
     if day.weekday() >= 5:
         return WEEKEND_SCENARIO
+
     pool = _pool()
     if not pool:
         return WEEKEND_SCENARIO
@@ -96,28 +95,25 @@ def scenario_for_day(day: date) -> str:
 
 
 def marks_for_day(day: date) -> list[int]:
-    """Оценки, которые фейковая ЭСУО отдаёт за один день `day`."""
+    """Отдаёт оценки фейковой ЭСУО за один день с учётом роста нагрузки"""
     if day.weekday() >= 5:
         return []
+
     days = _marked_days(scenario_for_day(day))
     if not days:
         return []
-    return list(days[day.weekday() % len(days)])
+    return list(days[day.weekday() % len(days)]) * daily_load(day)
 
 
 class MockEgasConnector(AbstractEgasConnector):
-    """ЭСУО-имитация на тестовых данных пакета `mock_egas`."""
-
     code = "MOCK"
     default_base_url = "mock://mock_egas"
 
-    #: Подмена «сегодня» для всех новых коннекторов. Нужна симуляции
-    #: нескольких ночей подряд (см. `mock_egas demo nights`).
     _today_override: ClassVar[date | None] = None
 
     @classmethod
     def set_today(cls, value: date | None) -> None:
-        """Задать/сбросить общую подмену текущей даты (None — реальная)."""
+        """Задаёт или сбрасывает общую подмену текущей даты"""
         cls._today_override = value
 
     def __init__(
@@ -138,7 +134,7 @@ class MockEgasConnector(AbstractEgasConnector):
         )
 
     async def _authenticate(self) -> None:
-        """Фейковая ЭСУО не требует входа."""
+        """Фейковая ЭСУО не требует входа"""
 
     async def _fetch_grades(
         self,

@@ -1,5 +1,3 @@
-#crud
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +10,7 @@ async def create(
     name: str,
     API_file: str,
 ) -> EGAS:
-    """Создаёт новую ЭГАС и возвращает её"""
+    """Создаёт ЭГАС и возвращает её"""
     egas = EGAS(name=name, API_file=API_file)
     session.add(egas)
     await session.commit()
@@ -42,7 +40,7 @@ async def update(
     egas_id: int,
     **fields: object,
 ) -> EGAS | None:
-    """Обновляет указанные поля ЭГАС и возвращает её или None"""
+    """Обновляет указанные поля ЭГАС"""
     egas = await session.get(EGAS, egas_id)
     if egas is None:
         return None
@@ -54,7 +52,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, egas_id: int) -> bool:
-    """Удаляет ЭГАС по id. Возвращает True, если запись удалена"""
+    """Удаляет ЭГАС по id, True если запись была"""
     egas = await session.get(EGAS, egas_id)
     if egas is None:
         return False

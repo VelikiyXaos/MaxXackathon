@@ -18,6 +18,7 @@ logger = logging.getLogger("scripts")
 
 
 async def _status() -> int:
+    """Печатает сводку по таблице и предупреждает о незаданном max_id"""
     async with session_scope() as session:
         subjects = await subject_crud.get_all(session)
         admins = await admin_crud.get_all(session)
@@ -34,15 +35,16 @@ async def _status() -> int:
             print(f"  - max_id={row.max_id}")
 
     configured = admin_max_id()
-    if configured is None:
-        if not admins:
-            print(
-                f"\n{ADMIN_MAX_ID_ENV} не задан укажите его в .env и запустите `python -m scripts seed-admin`"
-            )
+    if configured is None and not admins:
+        print(
+            f"\n{ADMIN_MAX_ID_ENV} не задан: укажите его в .env "
+            f"и запустите `python -m scripts seed-admin`"
+        )
     return 0
 
 
 async def _init(*, with_test: bool, required_admin: bool) -> int:
+    """Прогоняет наполнение базы и создание администратора"""
     await seed_subjects()
     if with_test:
         await seed_test_data()
@@ -52,6 +54,7 @@ async def _init(*, with_test: bool, required_admin: bool) -> int:
 
 
 def _parse(argv: list[str] | None) -> argparse.Namespace:
+    """Разбирает командную строку scripts в Namespace"""
     parser = argparse.ArgumentParser(
         prog="python -m scripts",
         description="Запуск и первичное заполнение базы данных.",
@@ -84,6 +87,7 @@ def _parse(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Разбирает аргументы, настраивает логи и выполняет команду"""
     args = _parse(argv)
 
     logging.basicConfig(
@@ -92,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     async def run() -> int:
+        """Выполняет разобранную команду"""
         if args.command == "init":
             return await _init(
                 with_test=not args.no_test,

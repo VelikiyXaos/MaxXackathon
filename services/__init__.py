@@ -1,5 +1,3 @@
-# services
-
 from contextlib import asynccontextmanager
 
 from db.database import SessionFactory
@@ -7,6 +5,6 @@ from db.database import SessionFactory
 
 @asynccontextmanager
 async def session_scope():
-    """Открывает и закрывает сессию базы данных."""
+    """Открывает сессию базы данных и закрывает её на выходе"""
     async with SessionFactory() as session:
         yield session

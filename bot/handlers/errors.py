@@ -6,6 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 def setup_error_handlers(dp: Dispatcher) -> None:
+    """Подписывает логирование необработанных исключений"""
+
     @dp.errors()
     async def on_error(event: ErrorEvent) -> None:
         logger.error(

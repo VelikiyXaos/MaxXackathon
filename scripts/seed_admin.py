@@ -14,6 +14,7 @@ INT32_MAX = 2_147_483_647
 
 
 def admin_max_id() -> int | None:
+    """Читает max_id администратора из окружения"""
     raw = os.getenv(ADMIN_MAX_ID_ENV, "").strip()
     if not raw:
         return None
@@ -31,6 +32,7 @@ def admin_max_id() -> int | None:
 
 
 async def seed_admin(*, required: bool = False) -> int:
+    """Создаёт первого администратора, если он ещё не заведён"""
     max_id = admin_max_id()
 
     if max_id is None:

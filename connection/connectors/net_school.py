@@ -1,14 +1,3 @@
-"""Коннектор к ЭСУО «Сетевой город» (региональный сервер EGAS).
-
-Вся специфика ЭСУО в одном классе: маршруты (`/login`, `/users/current`,
-`/student/diary`, `/logout`), идентификатор сессии в cookie
-`NETSCHOOL_SESSIONID`, догрузка длинного периода чанками и разбор ответа
-`weekDays → lessons → assignments → mark.mark`.
-
-Структура ответа повторяет `mock_egas.models.Diary.to_raw()`, поэтому
-тесты работают без реального сервера: подменяется `_fetch_grades`.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -27,17 +16,12 @@ from connection.errors import (
 
 logger = logging.getLogger(__name__)
 
-#: Имя cookie, в которой ЭСУО хранит идентификатор сессии.
 SESSION_COOKIE = "NETSCHOOL_SESSIONID"
 
-#: Сколько дней догружаем одним запросом `student/diary`: длинный период
-#: (учебный год) сервер отдаёт тяжело, поэтому идём по частям.
 CHUNK_DAYS = 28
 
 
 class NetSchoolConnector(AbstractEgasConnector):
-    """Асинхронный коннектор к «Сетевому городу» для одного ученика."""
-
     code = "NETSCHOOL"
     default_base_url = "https://netschool.app"
 
@@ -47,18 +31,14 @@ class NetSchoolConnector(AbstractEgasConnector):
         self._sid: str | None = None
         self._egas_student_id: int | None = None
 
-    # -- lifecycle ----------------------------------------------------------
-
     @property
     def is_logged_in(self) -> bool:
-        """Авторизован ли коннектор в ЭСУО."""
+        """Авторизован ли коннектор в ЭСУО"""
         return self._sid is not None
 
     async def aclose(self) -> None:
-        """Завершает сессию ЭСУО и закрывает HTTP-соединение."""
+        """Завершает сессию ЭСУО и закрывает HTTP-соединение"""
         await self._release()
-
-    # -- ЭСУО-специфика: авторизация ---------------------------------------
 
     async def _authenticate(self) -> None:
         if not self._password:
@@ -87,14 +67,13 @@ class NetSchoolConnector(AbstractEgasConnector):
             )
 
         self._sid = str(sid)
-        # некоторые версии ЭСУО не ставят cookie, а отдают sid в теле ответа
         self._get_session().cookie_jar.update_cookies(
             {SESSION_COOKIE: self._sid}, URL(self._base_url)
         )
         logger.info("Авторизация в ЭСУО выполнена: %s", self._login)
 
     async def _release(self) -> None:
-        """Закрывает сессию в ЭСУО и HTTP-соединение."""
+        """Закрывает сессию в ЭСУО и HTTP-соединение"""
         if self.is_logged_in:
             await self._logout()
         if self._session is not None and not self._session.closed:
@@ -104,7 +83,7 @@ class NetSchoolConnector(AbstractEgasConnector):
         self._egas_student_id = None
 
     async def _logout(self) -> None:
-        """Закрывает сессию в ЭСУО. Ошибки сети не поднимаются."""
+        """Закрывает сессию в ЭСУО, сетевые ошибки глотая"""
         self._sid = None
         self._egas_student_id = None
 
@@ -117,8 +96,6 @@ class NetSchoolConnector(AbstractEgasConnector):
             logger.warning(
                 "Не удалось завершить сессию ЭСУО %s: %s", self._login, exc
             )
-
-    # -- ЭСУО-специфика: дневник и разбор -----------------------------------
 
     async def _fetch_grades(
         self,
@@ -141,7 +118,7 @@ class NetSchoolConnector(AbstractEgasConnector):
         date_from: date,
         date_to: date,
     ) -> list[dict]:
-        """Дневник за период: список дней, где у каждого дня есть оценки."""
+        """Забирает дневник за период списком дней с оценками"""
         if date_to < date_from:
             return []
 
@@ -171,7 +148,6 @@ class NetSchoolConnector(AbstractEgasConnector):
                         continue
                     day_key = day.get("date")
                     if day_key is not None:
-                        # недели соседних чанков пересекаются по датам
                         if day_key in seen_days:
                             continue
                         seen_days.add(day_key)
@@ -182,7 +158,7 @@ class NetSchoolConnector(AbstractEgasConnector):
 
     @staticmethod
     def _parse_marks(week_days: list[dict]) -> list[int]:
-        """`weekDays[].lessons[].assignments[].mark.mark` → список оценок."""
+        """Достаёт оценки из weekDays[].lessons[].assignments[].mark"""
         grades: list[int] = []
 
         for day in week_days:
@@ -197,13 +173,9 @@ class NetSchoolConnector(AbstractEgasConnector):
 
         return grades
 
-    # -- Внутреннее --------------------------------------------------------
-
     def _get_session(self) -> aiohttp.ClientSession:
-        """Возвращает HTTP-сессию, создавая её при первом обращении."""
+        """Отдаёт HTTP-сессию, создавая её при первом обращении"""
         if self._session is None or self._session.closed:
-            # unsafe=True — иначе cookie-jar отбрасывает куки от IP-адресов
-            # (локальные серверы ЭСУО и тестовые стенды живут на 127.0.0.1)
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=self._timeout),
                 cookie_jar=aiohttp.CookieJar(unsafe=True),
@@ -216,7 +188,7 @@ class NetSchoolConnector(AbstractEgasConnector):
         date_from: date,
         date_to: date,
     ) -> list[dict]:
-        """Один запрос `student/diary` за часть периода."""
+        """Делает один запрос student/diary за часть периода"""
         data = await self._fetch_json(
             "GET",
             f"{self._base_url}/student/diary",
@@ -236,7 +208,7 @@ class NetSchoolConnector(AbstractEgasConnector):
         )
 
     async def _resolve_student_id(self) -> int:
-        """Определяет внутренний id ученика в ЭСУО по текущему логину."""
+        """Определяет внутренний id ученика в ЭСУО по текущему логину"""
         if self._egas_student_id is not None:
             return self._egas_student_id
 
@@ -254,7 +226,7 @@ class NetSchoolConnector(AbstractEgasConnector):
         )
 
     async def _fetch_json(self, method: str, url: str, **kwargs: Any) -> Any:
-        """Выполняет запрос и читает JSON, поднимая свои исключения."""
+        """Выполняет запрос и читает JSON, поднимая свои исключения"""
         session = self._get_session()
         try:
             async with session.request(method, url, **kwargs) as response:
@@ -265,13 +237,15 @@ class NetSchoolConnector(AbstractEgasConnector):
             raise EgasError(f"Сбой связи с ЭСУО {self._base_url}: {exc}") from exc
 
     async def _read_json(self, response: aiohttp.ClientResponse) -> Any:
-        """Читает JSON-ответ, поднимая понятные исключения."""
+        """Читает JSON-ответ, поднимая понятные исключения"""
         if response.status in (401, 403):
             raise EgasAuthError(
                 f"ЭСУО отклонила запрос ({response.status}) для {self._login}"
             )
         if response.status >= 400:
-            raise EgasError(f"ЭСУО вернула HTTP {response.status} на {response.url}")
+            raise EgasError(
+                f"ЭСУО вернула HTTP {response.status} на {response.url}"
+            )
 
         try:
             return await response.json(content_type=None)

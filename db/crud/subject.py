@@ -1,5 +1,3 @@
-#crud
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +5,7 @@ from db.models import City, Subject
 
 
 async def create(session: AsyncSession, *, name: str) -> Subject:
-    """Создаёт новый субъект РФ и возвращает его"""
+    """Создаёт субъект РФ и возвращает его"""
     subject = Subject(name=name)
     session.add(subject)
     await session.commit()
@@ -37,7 +35,7 @@ async def update(
     subject_id: int,
     **fields: object,
 ) -> Subject | None:
-    """Обновляет указанные поля субъекта РФ и возвращает его или None"""
+    """Обновляет указанные поля субъекта РФ"""
     subject = await session.get(Subject, subject_id)
     if subject is None:
         return None
@@ -49,7 +47,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, subject_id: int) -> bool:
-    """Удаляет субъект РФ по id. Возвращает True, если запись удалена"""
+    """Удаляет субъект РФ по id, True если запись была"""
     subject = await session.get(Subject, subject_id)
     if subject is None:
         return False
@@ -57,10 +55,11 @@ async def delete(session: AsyncSession, subject_id: int) -> bool:
     await session.commit()
     return True
 
+
 async def search_by_city_name(
     session: AsyncSession, query: str, *, limit: int = 10
 ) -> list[Subject]:
-    """Ищет регионы, в которых есть город с подстрокой в названии."""
+    """Ищет регионы, в которых есть город с подстрокой в названии"""
     result = await session.execute(
         select(Subject)
         .join(City, City.subject_id == Subject.id)

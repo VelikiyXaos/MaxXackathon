@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_bot() -> tuple[Bot, Dispatcher]:
+    """Собирает бота с роутерами и обработчиком ошибок"""
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
 
@@ -40,13 +41,18 @@ def create_bot() -> tuple[Bot, Dispatcher]:
 
 
 async def main() -> None:
+    """Публикует команды и уходит в бесконечный polling"""
     bot, dp = create_bot()
     await setup_commands(bot)
     logger.info("Запуск бота...")
 
-    asyncio.create_task(daily_update_loop())
+    updater = asyncio.create_task(daily_update_loop())
 
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        updater.cancel()
+        await asyncio.gather(updater, return_exceptions=True)
 
 
 if __name__ == "__main__":

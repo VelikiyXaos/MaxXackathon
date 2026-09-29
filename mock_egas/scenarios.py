@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import date, time, timedelta
 from typing import Callable
 
 from mock_egas.models import Assignment, Day, Diary, Lesson
@@ -29,6 +29,7 @@ def _assignment(
     is_duty: bool = False,
     comment: str = "",
 ) -> Assignment:
+    """Собирает задание для сценария"""
     return Assignment(
         id=id_,
         comment=comment,
@@ -50,6 +51,7 @@ def _lesson(
     end: time | None = None,
     assignments: list[Assignment] | None = None,
 ) -> Lesson:
+    """Собирает урок, подставляя время по номеру из LESSON_TIMES"""
     if start is None or end is None:
         start, end = LESSON_TIMES[number - 1]
     return Lesson(
@@ -64,96 +66,101 @@ def _lesson(
 
 
 def _day(day: date, *lessons: Lesson) -> Day:
+    """Собирает день недели из уроков"""
     return Day(lessons=list(lessons), day=day)
 
 
-def _diary(*days: Day) -> Diary:
-    return Diary(start=WEEK_START, end=WEEK_END, schedule=list(days))
+def _week_days() -> tuple[date, ...]:
+    """Отдаёт семь дат эталонной недели от понедельника до воскресенья"""
+    return tuple(WEEK_START + timedelta(days=offset) for offset in range(7))
+
+
+def _day_of_week(offset: int) -> date:
+    """Отдаёт дату недели по смещению от её начала"""
+    return WEEK_START + timedelta(days=offset)
+
+
+def _week(*filled: Day) -> Diary:
+    """Собирает дневник недели, ставя заполненные дни на свои даты"""
+    by_date = {day.day: day for day in filled}
+    schedule = [by_date.get(value, _day(value)) for value in _week_days()]
+    return Diary(start=WEEK_START, end=WEEK_END, schedule=schedule)
+
 
 def regular_week() -> Diary:
-    """Учебная неделя"""
-    mon = WEEK_START
-    monday_alg_homework = _assignment(101, "Параграф 12, упражнения 1–5", "Домашнее задание",
-                      date(2026, 9, 15), mark=5, comment="Отлично")
-    monday_rus_homework = _assignment(102, "Подготовиться к диктанту", "Домашнее задание",
-                      date(2026, 9, 16))
+    """Строит учебную неделю с разбросанными по дням оценками"""
+    mon, tue, wed, thu, fri = _week_days()[:5]
 
-    tuesday_alg_work = _assignment(201, "Разложение многочлена на множители",
-                      "Самостоятельная работа", date(2026, 9, 17), mark=4,
-                      comment="Есть недочёты")
-    tuesday_geo_homework = _assignment(202, "Придумать 3 велосипедных маршрута",
-                      "Домашнее задание", date(2026, 9, 18))
+    tue_hw = _assignment(101, "Параграф 12, упражнения 1–5", "Домашнее задание",
+                         date(2026, 9, 15), mark=5, comment="Отлично")
+    mon_hw = _assignment(102, "Подготовиться к диктанту", "Домашнее задание",
+                         date(2026, 9, 16))
+    tue_work = _assignment(201, "Разложение многочлена на множители",
+                           "Самостоятельная работа", date(2026, 9, 17), mark=4,
+                           comment="Есть недочёты")
+    tue_geo_hw = _assignment(202, "Придумать 3 велосипедных маршрута",
+                             "Домашнее задание", date(2026, 9, 18))
+    mon_test = _assignment(301, "Среды обитания организмов", "Тест",
+                           date(2026, 9, 18), mark=3)
+    wed_essay = _assignment(302, "Эссе «Моя будущая профессия»", "Сочинение",
+                            date(2026, 9, 21))
 
-    wednesday_bio_test = _assignment(301, "Среды обитания организмов", "Тест",
-                       date(2026, 9, 18), mark=3)
-    wednesday_lit_essay = _assignment(302, "Эссе «Моя будущая профессия»", "Сочинение",
-                       date(2026, 9, 21))
-
-    return _diary(
+    return _week(
         _day(mon,
-             _lesson(mon, 1, "Алгебра", room="301", assignments=[monday_rus_homework]),
-             _lesson(mon, 2, "Русский язык", room="204", assignments=[monday_alg_homework]),
-             _lesson(mon, 3, "Биология", room="112", assignments=[wednesday_bio_test]),
+             _lesson(mon, 1, "Алгебра", room="301", assignments=[mon_hw]),
+             _lesson(mon, 2, "Русский язык", room="204", assignments=[tue_hw]),
+             _lesson(mon, 3, "Биология", room="112", assignments=[mon_test]),
              _lesson(mon, 4, "История", room="210"),
              _lesson(mon, 5, "Физическая культура", room="Спортзал")),
-        _day(date(2026, 9, 15),
-             _lesson(date(2026, 9, 15), 1, "Алгебра", room="301", assignments=[tuesday_alg_work]),
-             _lesson(date(2026, 9, 15), 2, "География", room="118", assignments=[tuesday_geo_homework]),
-             _lesson(date(2026, 9, 15), 3, "Литература", room="204"),
-             _lesson(date(2026, 9, 15), 4, "Физика", room="305")),
-        _day(date(2026, 9, 16),
-             _lesson(date(2026, 9, 16), 1, "Информатика", room="314"),
-             _lesson(date(2026, 9, 16), 2, "Английский язык", room="408"),
-             _lesson(date(2026, 9, 16), 3, "Химия", room="302", assignments=[wednesday_lit_essay]),
-             _lesson(date(2026, 9, 16), 4, "Обществознание", room="210")),
-        _day(date(2026, 9, 17),
-             _lesson(date(2026, 9, 17), 1, "Русский язык", room="204"),
-             _lesson(date(2026, 9, 17), 2, "Алгебра", room="301"),
-             _lesson(date(2026, 9, 17), 3, "Биология", room="112"),
-             _lesson(date(2026, 9, 17), 4, "История", room="210")),
-        _day(date(2026, 9, 18),
-             _lesson(date(2026, 9, 18), 1, "Литература", room="204"),
-             _lesson(date(2026, 9, 18), 2, "Физика", room="305"),
-             _lesson(date(2026, 9, 18), 3, "География", room="118"),
-             _lesson(date(2026, 9, 18), 4, "Физическая культура", room="Спортзал")),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+        _day(tue,
+             _lesson(tue, 1, "Алгебра", room="301", assignments=[tue_work]),
+             _lesson(tue, 2, "География", room="118", assignments=[tue_geo_hw]),
+             _lesson(tue, 3, "Литература", room="204"),
+             _lesson(tue, 4, "Физика", room="305")),
+        _day(wed,
+             _lesson(wed, 1, "Информатика", room="314"),
+             _lesson(wed, 2, "Английский язык", room="408"),
+             _lesson(wed, 3, "Химия", room="302", assignments=[wed_essay]),
+             _lesson(wed, 4, "Обществознание", room="210")),
+        _day(thu,
+             _lesson(thu, 1, "Русский язык", room="204"),
+             _lesson(thu, 2, "Алгебра", room="301"),
+             _lesson(thu, 3, "Биология", room="112"),
+             _lesson(thu, 4, "История", room="210")),
+        _day(fri,
+             _lesson(fri, 1, "Литература", room="204"),
+             _lesson(fri, 2, "Физика", room="305"),
+             _lesson(fri, 3, "География", room="118"),
+             _lesson(fri, 4, "Физическая культура", room="Спортзал")),
     )
 
 
 def week_without_lessons() -> Diary:
-    """Неделя без уроков"""
-    return _diary(
-        _day(date(2026, 9, 14)), _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)), _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)), _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
-    )
+    """Строит неделю без единого урока"""
+    return _week()
 
 
 def holiday_in_middle() -> Diary:
-    """Праздничный день посреди недели"""
-    mon = WEEK_START
-    return _diary(
-        _day(mon, _lesson(mon, 1, "Алгебра", room="301"),
+    """Строит неделю с выходным посередине"""
+    mon, tue, thu, fri = (_day_of_week(i) for i in (0, 1, 3, 4))
+    return _week(
+        _day(mon,
+             _lesson(mon, 1, "Алгебра", room="301"),
              _lesson(mon, 2, "История", room="210")),
-        _day(date(2026, 9, 15),
-             _lesson(date(2026, 9, 15), 1, "Физика", room="305"),
-             _lesson(date(2026, 9, 15), 2, "Русский язык", room="204")),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17),
-             _lesson(date(2026, 9, 17), 1, "Биология", room="112"),
-             _lesson(date(2026, 9, 17), 2, "География", room="118")),
-        _day(date(2026, 9, 18),
-             _lesson(date(2026, 9, 18), 1, "Химия", room="302"),
-             _lesson(date(2026, 9, 18), 2, "Английский язык", room="408")),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+        _day(tue,
+             _lesson(tue, 1, "Физика", room="305"),
+             _lesson(tue, 2, "Русский язык", room="204")),
+        _day(thu,
+             _lesson(thu, 1, "Биология", room="112"),
+             _lesson(thu, 2, "География", room="118")),
+        _day(fri,
+             _lesson(fri, 1, "Химия", room="302"),
+             _lesson(fri, 2, "Английский язык", room="408")),
     )
 
 
 def graded_week() -> Diary:
-    """Неделя, где за каждое задание выставлена оценка"""
+    """Строит неделю, где за каждое задание выставлена оценка"""
     mon = WEEK_START
     grades = [5, 4, 3, 2, 5, 4]
     lesson_plan = [
@@ -164,10 +171,11 @@ def graded_week() -> Diary:
         ("История", "Крещение Руси"),
         ("Литература", "Лермонтов «Мцыри»"),
     ]
-    lessons = []
-    for number, (subject, content) in enumerate(lesson_plan, start=1):
-        lesson = _lesson(
-            mon, number, subject,
+    lessons = [
+        _lesson(
+            mon,
+            number,
+            subject,
             room=f"{300 + number}",
             assignments=[
                 _assignment(400 + number, content, "Контрольная работа",
@@ -175,258 +183,184 @@ def graded_week() -> Diary:
                             comment="Проверено")
             ],
         )
-        lessons.append(lesson)
-    return _diary(
-        _day(mon, *lessons),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
-    )
+        for number, (subject, content) in enumerate(lesson_plan, start=1)
+    ]
+    return _week(_day(mon, *lessons))
 
 
 def ungraded_week() -> Diary:
-    """Все задания без оценок"""
-    mon = WEEK_START
-    return _diary(
+    """Строит неделю, где все задания без оценок"""
+    mon, tue = _week_days()[:2]
+    mon_math_hw = _assignment(500, "Задача 12 (а–в)", "Домашнее задание",
+                              date(2026, 9, 15))
+    mon_rus_hw = _assignment(501, "Диктант", "Домашнее задание",
+                             date(2026, 9, 15))
+    return _week(
         _day(mon,
              _lesson(mon, 1, "Математика", room="301",
-                     assignments=[
-                         _assignment(500, "Задача 12 (а–в)", "Домашнее задание",
-                                     date(2026, 9, 15))
-                     ]),
+                     assignments=[mon_math_hw]),
              _lesson(mon, 2, "Русский язык", room="204",
-                     assignments=[
-                         _assignment(501, "Диктант", "Домашнее задание",
-                                     date(2026, 9, 15))
-                     ])),
-        _day(date(2026, 9, 15),
-             _lesson(date(2026, 9, 15), 1, "Биология", room="112"),
-             _lesson(date(2026, 9, 15), 2, "История", room="210")),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+                     assignments=[mon_rus_hw])),
+        _day(tue,
+             _lesson(tue, 1, "Биология", room="112"),
+             _lesson(tue, 2, "История", room="210")),
     )
 
 
 def duty_marks() -> Diary:
-    """Задания с «н/а» (не аттестован)"""
+    """Строит неделю с заданиями, отмеченными «н/а»"""
     mon = WEEK_START
-    return _diary(
+    alg_duty = _assignment(600, "Контрольная работа №2", "Контрольная работа",
+                           date(2026, 9, 15), is_duty=True)
+    phys_lab = _assignment(601, "Лабораторная работа №3",
+                           "Лабораторная работа", date(2026, 9, 16), is_duty=True)
+    return _week(
         _day(mon,
-             _lesson(mon, 1, "Алгебра", room="301",
-                     assignments=[
-                         _assignment(600, "Контрольная работа №2",
-                                     "Контрольная работа", date(2026, 9, 15),
-                                     is_duty=True)
-                     ]),
-             _lesson(mon, 2, "Физика", room="305",
-                     assignments=[
-                         _assignment(601, "Лабораторная работа №3",
-                                     "Лабораторная работа", date(2026, 9, 16),
-                                     is_duty=True)
-                     ])),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+             _lesson(mon, 1, "Алгебра", room="301", assignments=[alg_duty]),
+             _lesson(mon, 2, "Физика", room="305", assignments=[phys_lab])),
     )
 
 
 def overdue_assignments() -> Diary:
-    """Просроченные задания: дедлайн раньше начала недели"""
+    """Строит неделю с просроченными заданиями"""
     mon = WEEK_START
-    return _diary(
+    lit_hw = [
+        _assignment(700, "Прочитать «Мёртвые души» (гл. 4)", "Домашнее задание",
+                    date(2026, 9, 13)),
+        _assignment(701, "Стихотворение наизусть", "Ответ на уроке",
+                    date(2026, 9, 12)),
+    ]
+    geo_practice = _assignment(702, "Контурная карта (Европа)",
+                               "Практическая работа", date(2026, 9, 11))
+    return _week(
         _day(mon,
-             _lesson(mon, 1, "Литература", room="204",
-                     assignments=[
-                         _assignment(700, "Прочитать «Мёртвые души» (гл. 4)",
-                                     "Домашнее задание", date(2026, 9, 13)),
-                         _assignment(701, "Стихотворение наизусть",
-                                     "Ответ на уроке", date(2026, 9, 12))
-                     ]),
+             _lesson(mon, 1, "Литература", room="204", assignments=lit_hw),
              _lesson(mon, 2, "География", room="118",
-                     assignments=[
-                         _assignment(702, "Контурная карта (Европа)",
-                                     "Практическая работа", date(2026, 9, 11))
-                     ])),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+                     assignments=[geo_practice])),
     )
 
 
 def lessons_without_room() -> Diary:
-    """Уроки без кабинета"""
+    """Строит неделю, где у уроков не указан кабинет"""
     mon = WEEK_START
-    return _diary(
+    return _week(
         _day(mon,
              _lesson(mon, 1, "Физическая культура"),
              _lesson(mon, 2, "ОБЖ", room=""),
              _lesson(mon, 3, "Алгебра", room="301"),
              _lesson(mon, 4, "Экскурсия в музей", room="")),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
     )
 
 
 def multi_assignment_lesson() -> Diary:
-    """Один урок с несколькими заданиями сразу"""
+    """Строит неделю с уроком, у которого сразу несколько заданий"""
     mon = WEEK_START
-    return _diary(
+    alg_tasks = [
+        _assignment(800, "КР №1", "Контрольная работа", date(2026, 9, 14),
+                    mark=5, comment="Молодец!"),
+        _assignment(801, "Домашнее задание: №312", "Домашнее задание",
+                    date(2026, 9, 15)),
+        _assignment(802, "Домашнее задание: №313–315", "Домашнее задание",
+                    date(2026, 9, 16)),
+    ]
+    return _week(
         _day(mon,
-             _lesson(mon, 1, "Алгебра", room="301",
-                     assignments=[
-                         _assignment(800, "КР №1", "Контрольная работа",
-                                     date(2026, 9, 14), mark=5,
-                                     comment="Молодец!"),
-                         _assignment(801, "Домашнее задание: №312",
-                                     "Домашнее задание", date(2026, 9, 15)),
-                         _assignment(802, "Домашнее задание: №313–315",
-                                     "Домашнее задание", date(2026, 9, 16)),
-                     ])),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+             _lesson(mon, 1, "Алгебра", room="301", assignments=alg_tasks)),
     )
 
 
 def busy_week() -> Diary:
-    """Максимально заполненная неделя"""
+    """Строит неделю, забитую уроками в каждый день"""
     subjects = [
         "Алгебра", "Русский язык", "Геометрия", "Физика",
         "История", "Биология", "Литература",
     ]
     days = []
-    assignment_id = 900
-    for offset in range(7):
-        current_day = date(2026, 9, 14 + offset)
-        lessons = []
-        for number, subject in enumerate(subjects, start=1):
-            assignment_id += 1
-            lesson = _lesson(
-                current_day, number, subject, room=f"{100 + number}",
+    for offset, current_day in enumerate(_week_days()):
+        lessons = [
+            _lesson(
+                current_day,
+                number,
+                subject,
+                room=f"{100 + number}",
                 assignments=[
-                    _assignment(assignment_id, "Изучить §" + str(number + 1),
-                                "Домашнее задание", date(2026, 9, 16 + offset))
+                    _assignment(900 + offset * len(subjects) + number,
+                                f"Изучить §{number + 1}",
+                                "Домашнее задание",
+                                date(2026, 9, 16 + offset))
                 ],
             )
-            lessons.append(lesson)
+            for number, subject in enumerate(subjects, start=1)
+        ]
         days.append(_day(current_day, *lessons))
-    return _diary(*days)
+    return _week(*days)
 
 
 def no_assignments_week() -> Diary:
-    """Только расписание без единого задания"""
+    """Строит неделю с расписанием, но без заданий"""
     mon = WEEK_START
-    return _diary(
+    return _week(
         _day(mon,
              _lesson(mon, 1, "Математика", room="301"),
              _lesson(mon, 2, "Русский язык", room="204"),
              _lesson(mon, 3, "Физкультура"),
              _lesson(mon, 4, "ИЗО", room="209")),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
     )
 
 
 def sparse_schedule() -> Diary:
-    """Расписание с пропущенными номерами уроков"""
-    mon = WEEK_START
-    return _diary(
+    """Строит неделю с пропущенными номерами уроков"""
+    mon, tue = _week_days()[:2]
+    return _week(
         _day(mon,
              _lesson(mon, 2, "Английский язык", room="408"),
              _lesson(mon, 3, "Химия", room="302"),
              _lesson(mon, 6, "Классный час", room="301")),
-        _day(date(2026, 9, 15),
-             _lesson(date(2026, 9, 15), 1, "Физика", room="305"),
-             _lesson(date(2026, 9, 15), 5, "Алгебра", room="301")),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+        _day(tue,
+             _lesson(tue, 1, "Физика", room="305"),
+             _lesson(tue, 5, "Алгебра", room="301")),
     )
 
 
 def single_school_day() -> Diary:
-    """Всего один учебный день за неделю"""
-    fri = date(2026, 9, 18)
-    return _diary(
-        _day(date(2026, 9, 14)),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
+    """Строит неделю с единственным учебным днём"""
+    fri = _day_of_week(4)
+    turgenev_hw = _assignment(850, "Пересказать биографию Тургенева",
+                              "Домашнее задание", date(2026, 9, 21))
+    return _week(
         _day(fri,
              _lesson(fri, 1, "Литература", room="204",
-                     assignments=[
-                         _assignment(850, "Пересказать биографию Тургенева",
-                                     "Домашнее задание", date(2026, 9, 21))
-                     ])),
-        _day(date(2026, 9, 19)),
-        _day(date(2026, 9, 20)),
+                     assignments=[turgenev_hw])),
     )
 
 
 def extreme_times() -> Diary:
-    """Крайние времена занятий"""
-    sat = date(2026, 9, 19)
-    return _diary(
-        _day(date(2026, 9, 14),
-             _lesson(date(2026, 9, 14), 1, "Алгебра", room="301")),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
+    """Строит неделю с занятиями на самых ранних и самых поздних часах"""
+    mon, sat, sun = (_day_of_week(i) for i in (0, 5, 6))
+    return _week(
+        _day(mon, _lesson(mon, 1, "Алгебра", room="301")),
         _day(sat,
              _lesson(sat, 1, "Факультатив по программированию", room="314",
                      start=time(17, 0), end=time(19, 0)),
              _lesson(sat, 2, "Шахматы", room="109",
                      start=time(19, 10), end=time(20, 0))),
-        _day(date(2026, 9, 20),
-             _lesson(date(2026, 9, 20), 1, "Подготовка к олимпиаде", room="314",
+        _day(sun,
+             _lesson(sun, 1, "Подготовка к олимпиаде", room="314",
                      start=time(8, 0), end=time(8, 45))),
     )
 
 
 def weekend_lessons() -> Diary:
-    """Учебная суббота"""
-    sat = date(2026, 9, 19)
-    return _diary(
-        _day(date(2026, 9, 14)),
-        _day(date(2026, 9, 15)),
-        _day(date(2026, 9, 16)),
-        _day(date(2026, 9, 17)),
-        _day(date(2026, 9, 18)),
+    """Строит неделю с учебной субботой"""
+    sat = _day_of_week(5)
+    olympiad_hw = _assignment(999, "Олимпиадные задачи", "Домашнее задание",
+                              date(2026, 9, 21))
+    return _week(
         _day(sat,
              _lesson(sat, 1, "Математика", room="301",
-                     assignments=[
-                         _assignment(999, "Олимпиадные задачи", "Домашнее задание",
-                                     date(2026, 9, 21))
-                     ]),
+                     assignments=[olympiad_hw]),
              _lesson(sat, 2, "Русский язык", room="204"),
              _lesson(sat, 3, "Физкультура")),
-        _day(date(2026, 9, 20)),
     )
 
 
@@ -450,7 +384,7 @@ SCENARIOS: dict[str, Callable[[], Diary]] = {
 
 
 def scenario(name: str) -> Diary:
-    """Вернуть имитацию дневника по имени тестового случая"""
+    """Отдаёт имитацию дневника по имени сценария"""
     try:
         factory = SCENARIOS[name]
     except KeyError:
@@ -462,5 +396,5 @@ def scenario(name: str) -> Diary:
 
 
 def count_days_with_lessons(diary: Diary) -> int:
-    """Количество дней недели, в которых есть хотя бы один урок"""
+    """Считает дни недели, в которых есть хотя бы один урок"""
     return sum(1 for day in diary.schedule if day.lessons)

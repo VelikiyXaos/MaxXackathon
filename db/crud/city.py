@@ -1,5 +1,3 @@
-#crud
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +10,7 @@ async def create(
     name: str,
     subject_id: int,
 ) -> City:
-    """Создаёт новый город и возвращает его"""
+    """Создаёт город и возвращает его"""
     city = City(name=name, subject_id=subject_id)
     session.add(city)
     await session.commit()
@@ -42,7 +40,7 @@ async def get_by_subject(session: AsyncSession, subject_id: int) -> list[City]:
 async def get_by_name(
     session: AsyncSession, name: str, subject_id: int
 ) -> City | None:
-    """Возвращает город по названию в пределах субъекта РФ или None"""
+    """Возвращает город по названию внутри субъекта РФ или None"""
     result = await session.execute(
         select(City).where(City.name == name, City.subject_id == subject_id)
     )
@@ -54,7 +52,7 @@ async def update(
     city_id: int,
     **fields: object,
 ) -> City | None:
-    """Обновляет указанные поля города и возвращает его или None"""
+    """Обновляет указанные поля города"""
     city = await session.get(City, city_id)
     if city is None:
         return None
@@ -66,7 +64,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, city_id: int) -> bool:
-    """Удаляет город по id. Возвращает True, если запись удалена"""
+    """Удаляет город по id, True если запись была"""
     city = await session.get(City, city_id)
     if city is None:
         return False
@@ -74,17 +72,18 @@ async def delete(session: AsyncSession, city_id: int) -> bool:
     await session.commit()
     return True
 
-# 
+
 async def search_by_name(
     session: AsyncSession, query: str, *, limit: int = 10
 ) -> list[City]:
-    """Ищет города по подстроке в названии."""
+    """Ищет города по подстроке в названии"""
     result = await session.execute(
         select(City)
         .where(City.name.ilike(f"%{query}%"))
         .limit(limit)
     )
     return list(result.scalars())
+
 
 async def search_by_subject_and_name(
     session: AsyncSession,
@@ -93,7 +92,7 @@ async def search_by_subject_and_name(
     *,
     limit: int = 10,
 ) -> list[City]:
-    """Ищет города внутри региона по подстроке в названии."""
+    """Ищет города внутри региона по подстроке в названии"""
     result = await session.execute(
         select(City)
         .where(

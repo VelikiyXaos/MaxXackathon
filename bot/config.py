@@ -9,5 +9,5 @@ BOT_TOKEN = os.getenv("MAX_BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError(
         "Переменная окружения MAX_BOT_TOKEN не задана. "
-        "Скопируйте .env.template в .env и укажите токен бота."
+        "Скопируйте .env.example в .env и укажите токен бота."
     )

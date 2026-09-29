@@ -4,32 +4,39 @@ from maxapi import Router
 from maxapi.types import MessageCallback, MessageCreated
 
 from bot import messages
+from bot.helpers import message_text
 from bot.keyboards import commercial_partner_menu_keyboard
 from bot.states import BonusAdding
 from services import auth, bonuses
 
 router = Router(router_id="bonus")
 
+DATE_FORMATS = ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y")
 
-def _message_text(event: MessageCreated) -> str:
-    """Возвращает текст входящего сообщения (или пустую строку)."""
-    body = event.message.body
-    return body.text.strip() if body and body.text else ""
+
+def _parse_date(raw: str) -> datetime | None:
+    """Разбирает дату в одном из поддерживаемых форматов"""
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 @router.message_created(states=BonusAdding.NAME)
 async def on_bonus_name(event: MessageCreated, context):
-    """Название бонуса принято — запрашиваем условие."""
-    await context.update_data(bonus_name=_message_text(event))
+    """Название бонуса принято: запрашиваем уровень"""
+    await context.update_data(bonus_name=message_text(event))
     await context.set_state(BonusAdding.CONDITION)
     await event.message.answer(text=messages.BONUS_CONDITION_REQUEST)
 
 
 @router.message_created(states=BonusAdding.CONDITION)
 async def on_bonus_condition(event: MessageCreated, context):
-    """Условие принято — запрашиваем срок действия."""
+    """Уровень принят: запрашиваем срок действия"""
     try:
-        level = int(_message_text(event))
+        level = int(message_text(event))
     except ValueError:
         level = 0
 
@@ -44,34 +51,27 @@ async def on_bonus_condition(event: MessageCreated, context):
 
 @router.message_created(states=BonusAdding.DEADLINE)
 async def on_bonus_deadline(event: MessageCreated, context):
-    """Срок принят — запрашиваем промокод."""
-    raw = _message_text(event)
-    end_date = None
-    for fmt in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
-        try:
-            end_date = datetime.strptime(raw, fmt).date()
-            break
-        except ValueError:
-            continue
+    """Срок принят: запрашиваем промокод"""
+    end_date = _parse_date(message_text(event))
 
     if end_date is None:
         await event.message.answer(text=messages.BONUS_DEADLINE_INVALID)
         return
 
-    await context.update_data(bonus_deadline=end_date)
+    await context.update_data(bonus_deadline=end_date.date())
     await context.set_state(BonusAdding.PROMO)
     await event.message.answer(text=messages.BONUS_PROMO_REQUEST)
 
 
 @router.message_created(states=BonusAdding.PROMO)
 async def on_bonus_promo(event: MessageCreated, context):
-    """Промокод принят — сохраняем бонус и возвращаемся в меню."""
+    """Промокод принят: сохраняем бонус и возвращаемся в меню"""
     data = await context.get_data()
-    promo = _message_text(event)
+    promo = message_text(event)
     await context.update_data(bonus_promo=promo)
 
-    partner = await auth.get_partner(event.get_ids()[1] or 0)
-    if partner is None:
+    partner_max_id = event.get_ids()[1] or 0
+    if await auth.get_partner(partner_max_id) is None:
         await context.clear()
         await event.message.answer(text=messages.UNKNOWN_COMMAND)
         return
@@ -88,7 +88,7 @@ async def on_bonus_promo(event: MessageCreated, context):
 
     try:
         await bonuses.add_bonus(
-            partner_max_id=event.get_ids()[1] or 0,
+            partner_max_id=partner_max_id,
             name=data.get("bonus_name", ""),
             level=level,
             deadline=deadline,
