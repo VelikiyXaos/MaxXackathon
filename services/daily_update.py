@@ -11,7 +11,6 @@ from db.crud import bonus as bonus_crud
 from db.crud import student as student_crud
 from db.crud import student_bonus as student_bonus_crud
 from services import session_scope
-from services.bonus import grant_available_bonuses
 from services.experience import calculate_and_save_school_experience
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,6 @@ class DailyUpdateReport:
     xp_awarded: int = 0
     expired_bonus_ids: list[int] = field(default_factory=list)
     bonus_links_revoked: int = 0
-    bonuses_granted: int = 0
     errors: list[str] = field(default_factory=list)
 
 async def update_student_experience(
@@ -84,29 +82,14 @@ async def expire_bonuses(
                 links,
             )
 
-async def refresh_available_bonuses(report: DailyUpdateReport) -> None:
-    """Обновляет информацию о бонусах, доступных каждому студенту"""
-    async with session_scope() as session:
-        students = await student_crud.get_all(session)
-
-    for student in students:
-        try:
-            granted = await grant_available_bonuses(student.id)
-            report.bonuses_granted += len(granted)
-            if granted:
-                logger.info(
-                    "Студент %s получил доступных бонусов: %s",
-                    student.id,
-                    len(granted),
-                )
-        except Exception as exc:
-            report.errors.append(f"bonuses for student {student.id}: {exc}")
-            logger.exception(
-                "Не удалось обновить бонусы студента %s", student.id
-            )
-
 async def run_daily_update() -> DailyUpdateReport:
-    """Выполняет полный цикл обновления: сроки бонусов → оценки/опыт → доступные бонусы"""
+    """Выполняет полный цикл обновления: сроки бонусов → оценки/опыт
+
+    Выдачу бонусов ночной цикл не трогает: её инициирует сам
+    студент через бота (`services.bonuses.issue_bonus`). Автовыдача
+    забирала бы промокоды без действия студента и опустошала его
+    список «Доступные бонусы» (`services.bonuses.get_available_bonuses`).
+    """
     report = DailyUpdateReport()
     logger.info("Ежедневное обновление: старт")
 
@@ -118,19 +101,15 @@ async def run_daily_update() -> DailyUpdateReport:
 
     await update_all_students_grades(report)
 
-    await refresh_available_bonuses(report)
-
     logger.info(
         "Ежедневное обновление: готово (студентов %s, обновлено %s, "
-        "ошибок %s, ΔXP %s, истекло бонусов %s, отозвано связей %s, "
-        "выдано бонусов %s)",
+        "ошибок %s, ΔXP %s, истекло бонусов %s, отозвано связей %s)",
         report.students_total,
         report.students_updated,
         report.students_failed,
         report.xp_awarded,
         len(report.expired_bonus_ids),
         report.bonus_links_revoked,
-        report.bonuses_granted,
     )
     return report
 
