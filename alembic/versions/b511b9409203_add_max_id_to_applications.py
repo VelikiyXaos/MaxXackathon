@@ -1,4 +1,4 @@
-﻿"""add max_id to applications
+"""add max_id to applications
 
 Revision ID: b511b9409203
 Revises: 0e58fe12b069

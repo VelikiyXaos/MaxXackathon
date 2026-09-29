@@ -1,3 +1,5 @@
+# models
+
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, Identity, Integer, String
@@ -7,7 +9,7 @@ from db.database import Base
 
 
 class Bonus(Base):
-    """Бонус от партнёра за накопленный опыт"""
+    """Бонус от партнёра за накопленный опыт."""
 
     __tablename__ = "bonus"
 

@@ -3,8 +3,16 @@ import logging
 
 from maxapi import Bot, Dispatcher
 
+from bot.commands import setup_commands
 from bot.config import BOT_TOKEN
-from bot.handlers import callbacks_router, setup_error_handlers, start_router
+from bot.handlers import (
+    admin_router,
+    bonus_router,
+    partner_router,
+    setup_error_handlers,
+    start_router,
+    student_router,
+)
 from services.daily_update import daily_update_loop
 
 logging.basicConfig(
@@ -19,7 +27,13 @@ def create_bot() -> tuple[Bot, Dispatcher]:
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
 
-    dp.include_routers(start_router, callbacks_router)
+    dp.include_routers(
+        start_router,
+        student_router,
+        partner_router,
+        bonus_router,
+        admin_router,
+    )
     setup_error_handlers(dp)
 
     return bot, dp
@@ -27,6 +41,7 @@ def create_bot() -> tuple[Bot, Dispatcher]:
 
 async def main() -> None:
     bot, dp = create_bot()
+    await setup_commands(bot)
     logger.info("Запуск бота...")
 
     asyncio.create_task(daily_update_loop())

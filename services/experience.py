@@ -33,7 +33,17 @@ def get_xp_for_level(level: int) -> int:
     if level > 15:
         level = 15
     return 100 * level * level + 50 * level
-
+def get_level_for_xp(experience: int) -> int:
+    """
+    Возвращает максимальный уровень, доступный при данном опыте.
+    """
+    current_level = 0
+    for lvl in range(1, 16):
+        if get_xp_for_level(lvl) <= experience:
+            current_level = lvl
+        else:
+            break
+    return current_level
 
 async def get_student_level_info(student_id: int) -> dict:
     """Возвращает информацию об уровне студента"""

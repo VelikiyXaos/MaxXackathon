@@ -1,23 +1,285 @@
-from maxapi.types import Attachment, ButtonsPayload, CallbackButton
+import logging
+from pathlib import Path
 
-from bot.payloads import AboutPayload, HelloPayload
+from maxapi.types import (
+    Attachment,
+    ButtonsPayload,
+    CallbackButton,
+    InputMedia,
+    MessageButton,
+)
+
+from bot import buttons, payloads
+
+logger = logging.getLogger(__name__)
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+AGREEMENT_FILE = ASSETS_DIR / "Пользовательское соглашение.pdf"
+
+PROMOCODE_BUTTON_MAX = 20
 
 
-def main_menu_keyboard() -> Attachment:
-    """Собирает inline-клавиатуру главного меню."""
+def _callback_button(text: str, payload: payloads.CallbackPayload) -> CallbackButton:
+    return CallbackButton(text=text, payload=payload.pack())
+
+
+def _message_button(text: str) -> MessageButton:
+    return MessageButton(text=text)
+
+
+def _home_row() -> list[MessageButton]:
+    """Ряд с кнопкой, отправляющей команду /start.
+
+    Нажатие MessageButton присылает боту обычное сообщение "/start",
+    поэтому срабатывает существующий хендлер команды /start.
+    """
+    return [_message_button(buttons.BTN_START_COMMAND)]
+
+
+def home_keyboard() -> Attachment:
+    """Клавиатура с единственной кнопкой /start.
+
+    Нужна, когда бот зовёт пользователя к /start: один тап вместо
+    ручного набора команды.
+    """
+    return ButtonsPayload(buttons=[_home_row()]).pack()
+
+
+def role_selection_keyboard() -> Attachment:
+    """Inline-клавиатура выбора роли: учащийся / партнёр."""
     return ButtonsPayload(
         buttons=[
             [
-                CallbackButton(
-                    text="👋 Поздороваться",
-                    payload=HelloPayload().pack(),
+                _callback_button(
+                    buttons.BTN_ROLE_STUDENT,
+                    payloads.RolePayload(value=payloads.ROLE_STUDENT),
                 )
             ],
             [
-                CallbackButton(
-                    text="ℹ️ О боте",
-                    payload=AboutPayload().pack(),
+                _callback_button(
+                    buttons.BTN_ROLE_PARTNER,
+                    payloads.RolePayload(value=payloads.ROLE_PARTNER),
                 )
             ],
         ]
     ).pack()
+
+
+def agreement_keyboard() -> Attachment:
+    """Inline-клавиатура соглашения на обработку персональных данных."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_ACCEPT_AGREEMENT,
+                    payloads.AgreementPayload(),
+                )
+            ],
+        ]
+    ).pack()
+
+
+def agreement_attachments() -> list[Attachment]:
+    """Файл соглашения и кнопка принятия — в одном сообщении.
+
+    Если файл согласия отсутствует, отправляем только кнопку, чтобы
+    регистрация не прерывалась из-за ошибки чтения файла.
+    """
+    attachments: list[Attachment] = []
+    if AGREEMENT_FILE.is_file():
+        attachments.append(InputMedia(path=str(AGREEMENT_FILE)))
+    else:
+        logger.warning(
+            "Файл согласия не найден: %s — отправляю только кнопку",
+            AGREEMENT_FILE,
+        )
+    attachments.append(agreement_keyboard())
+    return attachments
+
+
+def city_selection_keyboard(cities: list) -> Attachment:
+    """Inline-клавиатура выбора города/региона из найденных."""
+    rows = [
+        [
+            _callback_button(
+                city.name,
+                payloads.CitySelectionPayload(
+                    city_id=city.id_, city_name=city.name
+                ),
+            )
+        ]
+        for city in cities
+    ]
+    return ButtonsPayload(buttons=rows).pack()
+
+
+def subject_selection_keyboard(subjects: list) -> Attachment:
+    """Inline-клавиатура выбора региона (субъекта) из найденных."""
+    rows = [
+        [
+            _callback_button(
+                subject.name,
+                payloads.SubjectSelectionPayload(
+                    subject_id=subject.id_, subject_name=subject.name
+                ),
+            )
+        ]
+        for subject in subjects
+    ]
+    return ButtonsPayload(buttons=rows).pack()
+
+
+def partner_type_keyboard() -> Attachment:
+    """Inline-клавиатура выбора типа партнёра."""
+    options = [
+        (buttons.BTN_PARTNER_TYPE_COMMERCIAL, payloads.PARTNER_TYPE_COMMERCIAL),
+        (buttons.BTN_PARTNER_TYPE_OU, payloads.PARTNER_TYPE_OU),
+        (buttons.BTN_PARTNER_TYPE_ESOU, payloads.PARTNER_TYPE_ESOU),
+    ]
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    text, payloads.PartnerTypePayload(value=value)
+                )
+            ]
+            for text, value in options
+        ]
+    ).pack()
+
+
+def student_menu_keyboard() -> Attachment:
+    """Главное меню учащегося."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_MY_BONUSES, payloads.MyBonusesPayload()
+                )
+            ],
+            [
+                _callback_button(
+                    buttons.BTN_AVAILABLE_BONUSES,
+                    payloads.AvailableBonusesPayload(),
+                )
+            ],
+            [
+                _callback_button(
+                    buttons.BTN_MY_PROGRESS, payloads.MyProgressPayload()
+                )
+            ],
+        ]
+    ).pack()
+
+
+def commercial_partner_menu_keyboard() -> Attachment:
+    """Главное меню коммерческого партнёра."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_MY_BONUSES, payloads.PartnerBonusesPayload()
+                )
+            ],
+            [
+                _callback_button(
+                    buttons.BTN_ADD_BONUS, payloads.AddBonusPayload()
+                )
+            ],
+        ]
+    ).pack()
+
+
+def available_bonus_keyboard(bonuses: list[dict]) -> Attachment:
+    """Кнопка получения под каждым доступным бонусом и возврат назад.
+
+    «Назад» идёт последней строкой в той же клавиатуре: второе
+    вложение в attachments MAX отправил бы отдельным сообщением.
+    Промокод в подписи обрезается — полный код и так печатается
+    в теле сообщения через BONUS_LINE_TEMPLATE.
+    """
+    rows = [
+        [
+            _callback_button(
+                f"{buttons.BTN_BONUS_TAKE} {_short_promocode(item)}",
+                payloads.TakeBonusPayload(bonus_id=item.get("id", 0)),
+            )
+        ]
+        for item in bonuses
+    ]
+    rows.append([_callback_button(buttons.BTN_BACK, payloads.BackPayload())])
+    return ButtonsPayload(buttons=rows).pack()
+
+
+def _short_promocode(bonus: dict) -> str:
+    """Промокод для подписи кнопки."""
+    promocode = str(bonus.get("promocode", ""))
+    if len(promocode) > PROMOCODE_BUTTON_MAX:
+        return promocode[:PROMOCODE_BUTTON_MAX] + "…"
+    return promocode
+
+
+def admin_menu_keyboard() -> Attachment:
+    """Главное меню администратора."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_APPLICATIONS, payloads.ApplicationsPayload()
+                )
+            ],
+            [
+                _callback_button(
+                    buttons.BTN_ADD_ADMIN, payloads.AddAdminPayload()
+                )
+            ],
+        ]
+    ).pack()
+
+
+def application_decision_keyboard(application_id: int) -> Attachment:
+    """Кнопки «Принять»/«Отклонить» для конкретной заявки."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_APPLICATION_ACCEPT,
+                    payloads.ApplicationDecisionPayload(
+                        application_id=application_id,
+                        decision=payloads.APPLICATION_ACCEPT,
+                    ),
+                ),
+                _callback_button(
+                    buttons.BTN_APPLICATION_REJECT,
+                    payloads.ApplicationDecisionPayload(
+                        application_id=application_id,
+                        decision=payloads.APPLICATION_REJECT,
+                    ),
+                ),
+            ],
+        ]
+    ).pack()
+
+
+def back_keyboard() -> Attachment:
+    """Клавиатура с единственной кнопкой возврата в главное меню."""
+    return ButtonsPayload(
+        buttons=[
+            [
+                _callback_button(
+                    buttons.BTN_BACK, payloads.BackPayload()
+                )
+            ],
+        ]
+    ).pack()
+
+
+def role_keyboard(role: str | None) -> Attachment:
+    """Клавиатура главного меню для роли (выбор роли, если роль None)."""
+    if role == payloads.ROLE_ADMIN:
+        return admin_menu_keyboard()
+    if role == payloads.ROLE_STUDENT:
+        return student_menu_keyboard()
+    if role == payloads.ROLE_PARTNER:
+        return commercial_partner_menu_keyboard()
+    return role_selection_keyboard()

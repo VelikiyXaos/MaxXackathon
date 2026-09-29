@@ -1,3 +1,5 @@
+#crud
+
 from datetime import date
 
 from sqlalchemy import select
@@ -9,7 +11,7 @@ from db.models import Bonus
 async def create(
     session: AsyncSession,
     *,
-    name: str,
+    name: str = "",
     promocode: str,
     need_experience: int,
     partner_id: int,
