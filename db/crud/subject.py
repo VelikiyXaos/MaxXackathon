@@ -5,7 +5,7 @@ from db.models import Subject
 
 
 async def create(session: AsyncSession, *, name: str) -> Subject:
-    """Создаёт новый субъект РФ и возвращает его."""
+    """Создаёт новый субъект РФ и возвращает его"""
     subject = Subject(name=name)
     session.add(subject)
     await session.commit()
@@ -14,14 +14,20 @@ async def create(session: AsyncSession, *, name: str) -> Subject:
 
 
 async def get(session: AsyncSession, subject_id: int) -> Subject | None:
-    """Возвращает субъект РФ по id или None."""
+    """Возвращает субъект РФ по id или None"""
     return await session.get(Subject, subject_id)
 
 
 async def get_all(session: AsyncSession) -> list[Subject]:
-    """Возвращает список всех субъектов РФ."""
+    """Возвращает список всех субъектов РФ"""
     result = await session.execute(select(Subject))
     return list(result.scalars())
+
+
+async def get_by_name(session: AsyncSession, name: str) -> Subject | None:
+    """Возвращает субъект РФ по названию или None"""
+    result = await session.execute(select(Subject).where(Subject.name == name))
+    return result.scalars().first()
 
 
 async def update(
@@ -29,7 +35,7 @@ async def update(
     subject_id: int,
     **fields: object,
 ) -> Subject | None:
-    """Обновляет указанные поля субъекта РФ и возвращает его или None."""
+    """Обновляет указанные поля субъекта РФ и возвращает его или None"""
     subject = await session.get(Subject, subject_id)
     if subject is None:
         return None
@@ -41,7 +47,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, subject_id: int) -> bool:
-    """Удаляет субъект РФ по id. Возвращает True, если запись удалена."""
+    """Удаляет субъект РФ по id. Возвращает True, если запись удалена"""
     subject = await session.get(Subject, subject_id)
     if subject is None:
         return False

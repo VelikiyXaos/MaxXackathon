@@ -1,4 +1,16 @@
-version: "3.8"
+x-app: &app
+  build:
+    context: .
+  image: maxxackathon:local
+  env_file:
+    - .env
+  environment:
+    DATABASE_URL: >-
+      postgresql+asyncpg://${POSTGRES_USER:-hackathon}:${POSTGRES_PASSWORD:-hackathon}@db:5432/${POSTGRES_DB:-hackathon}
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: unless-stopped
 
 services:
   db:
@@ -13,6 +25,60 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-hackathon} -d ${POSTGRES_DB:-hackathon}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  migrate:
+    <<: *app
+    container_name: hackathon_migrate
+    command: ["migrate"]
+    restart: "no"
+
+  seed:
+    <<: *app
+    container_name: hackathon_seed
+    command: ["seed", "init", "--no-test", "--required-admin"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  seed-test:
+    <<: *app
+    container_name: hackathon_seed_test
+    command: ["seed", "seed-test"]
+    profiles: ["test"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      seed:
+        condition: service_completed_successfully
+
+  bot:
+    <<: *app
+    container_name: hackathon_bot
+    command: ["bot"]
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+      seed-test:
+        condition: service_completed_successfully
+        required: false
 
 volumes:
   pgdata:

@@ -1,19 +1,3 @@
-﻿"""Демо-команды тестового модуля ЭСУО: подключить бота к mock_egas.
-
-    python -m mock_egas demo status           # что сейчас подключено в БД
-    python -m mock_egas demo on              # EGAS.API_file = MockEgasConnector
-    python -m mock_egas demo off             # вернуть NetSchoolConnector
-    python -m mock_egas demo nights --days 7  # прогнать 7 ночей подряд
-
-`on`/`off` меняют только строку `EGAS.API_file` — фабрика и реестр не трогаются.
-`nights` не ждёт 00:00: подменяет «сегодня» в `MockEgasConnector` и вызывает
-обычный `services.daily_update.run_daily_update()`, поэтому видно ровно то же,
-что сделал бы бот в полночь.
-
-Ограничение симуляции: `expire_bonuses` внутри `run_daily_update()` считает
-сроки по реальной сегодняшней дате, поэтому «будущие» ночи не истекают бонусы.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -40,7 +24,7 @@ MOCK_EGAS_NAME = "ЭСУО-имитация (mock_egas)"
 
 
 async def show_status() -> None:
-    """Показать ЭГАС и подключённые к ним коннекторы."""
+    """Показать ЭГАС и подключённые к ним коннекторы"""
     async with session_scope() as session:
         rows = await egas_crud.get_all(session)
         if not rows:
@@ -56,7 +40,7 @@ async def show_status() -> None:
 
 
 async def switch(target: str) -> None:
-    """Переключить все ЭГАС на коннектор `target` (при необходимости создать)."""
+    """Переключить все ЭГАС на коннектор `target` (при необходимости создать)"""
     async with session_scope() as session:
         rows = await egas_crud.get_all(session)
         if not rows:
@@ -80,7 +64,7 @@ async def switch(target: str) -> None:
 
 
 async def run_nights(days: int, start: date) -> None:
-    """Прогнать `days` ночных обновлений подряд, начиная с `start`."""
+    """Прогнать `days` ночных обновлений подряд, начиная с `start`"""
     students_info: list[tuple[int, str]] = []
     async with session_scope() as session:
         for student in await student_crud.get_all(session):
@@ -119,7 +103,7 @@ async def run_nights(days: int, start: date) -> None:
 
 
 async def amain(argv: list[str] | None = None) -> int:
-    """Асинхронная точка входа (удобно вызывать из тестов)."""
+    """Асинхронная точка входа (удобно вызывать из тестов)"""
     args = _parse(argv)
     try:
         if args.command == "status":
@@ -132,7 +116,7 @@ async def amain(argv: list[str] | None = None) -> int:
             start = date.fromisoformat(args.start) if args.start else date.today()
             await run_nights(args.days, start)
         return 0
-    except Exception as exc:  # noqa: BLE001 — CLI печатает ошибку один раз
+    except Exception as exc:
         print(f"Ошибка: {exc}", file=sys.stderr)
         return 1
 

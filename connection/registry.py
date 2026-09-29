@@ -1,13 +1,3 @@
-"""Реестр коннекторов ЭСУО.
-
-Ключ реестра — то, что лежит в `EGAS.API_file`: имя класса коннектора
-(для удобства принимается и `code` — короткий код ЭСУО).
-
-Новая ЭСУО подключается без правок этого файла: реескан
-`load_connectors()` импортирует все модули из `connection/connectors/`
-и регистрирует все неабстрактные наследники `AbstractEgasConnector`.
-"""
-
 from __future__ import annotations
 
 import importlib
@@ -30,19 +20,7 @@ _loaded = False
 def register_connector(
     connector_cls: type[AbstractEgasConnector],
 ) -> type[AbstractEgasConnector]:
-    """
-    Регистрирует коннектор вручную (обычно не нужно: работает автозагрузка).
-
-    Класс попадает в реестр под своим именем и, если задан, под кодом
-    ЭСУО в верхнем регистре.
-
-    Возвращает тот же класс — можно использовать как декоратор.
-
-    Raises:
-        TypeError: класс не наследует AbstractEgasConnector или остался
-            абстрактным (не реализованы `_authenticate` / `_fetch_grades`).
-        ValueError: имя или код уже заняты другим коннектором.
-    """
+    """Регистрирует коннектор вручную"""
     if not issubclass(connector_cls, AbstractEgasConnector):
         raise TypeError(
             f"{connector_cls.__name__} не наследует AbstractEgasConnector"
@@ -71,12 +49,7 @@ def register_connector(
 
 
 def _iter_connector_classes() -> Iterator[type[AbstractEgasConnector]]:
-    """
-    Неабстрактные классы коннекторов, объявленные в `connection/connectors/`.
-
-    Классы из других модулей (например, тестовые заглушки) автоматически
-    не регистрируются — для них нужен явный `register_connector`.
-    """
+    """Неабстрактные классы коннекторов, объявленные в `connection/connectors/`"""
     seen: set[type] = set()
     stack: list[type] = [AbstractEgasConnector]
     while stack:
@@ -94,15 +67,7 @@ def _iter_connector_classes() -> Iterator[type[AbstractEgasConnector]]:
 
 
 def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnector]]:
-    """
-    Импортирует модули из `connection/connectors/` и наполняет реестр.
-
-    Вызывается автоматически при поиске коннектора; повторные вызовы
-    ничего не делают, пока не передан `force=True`.
-
-    Returns:
-        Копия реестра: {имя: класс коннектора}.
-    """
+    """Импортирует модули из `connection/connectors/` и наполняет реестр"""
     global _loaded
     if _loaded and not force:
         return dict(_CONNECTORS)
@@ -113,7 +78,7 @@ def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnec
         module_name = f"{CONNECTORS_PACKAGE}.{module_info.name}"
         try:
             importlib.import_module(module_name)
-        except Exception:  # noqa: BLE001 — один битый модуль не роняет всех
+        except Exception:
             logger.exception("Не удалось импортировать модуль коннектора %s", module_name)
 
     for connector_cls in _iter_connector_classes():
@@ -128,12 +93,7 @@ def load_connectors(*, force: bool = False) -> dict[str, type[AbstractEgasConnec
 
 
 def get_connector_class(name: str) -> type[AbstractEgasConnector]:
-    """
-    Возвращает класс коннектора по имени из `EGAS.API_file`.
-
-    Raises:
-        ValueError: коннектор с таким именем не зарегистрирован.
-    """
+    """Возвращает класс коннектора по имени из `EGAS.API_file`"""
     load_connectors()
 
     connector_cls = _CONNECTORS.get(name)
@@ -148,5 +108,5 @@ def get_connector_class(name: str) -> type[AbstractEgasConnector]:
 
 
 def registered_connectors() -> dict[str, type[AbstractEgasConnector]]:
-    """Текущее содержимое реестра (с автозагрузкой)."""
+    """Текущее содержимое реестра"""
     return load_connectors()

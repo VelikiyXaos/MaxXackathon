@@ -1,24 +1,8 @@
-"""Модели тестовых данных ЭСУО «Сетевой город».
-
-Классы повторяют структуру одноимённых классов библиотеки
-`netschoolapi <https://github.com/nm17/netschoolapi>`_
-(файл `netschoolapi/schemas.py`), но не зависят от неё.
-
-Это фиксированные тестовые данные для разработки и тестирования бота без
-реального доступа к электронному дневнику:
-- `to_dict()` возвращает объект так, как его отдаёт библиотека netschoolapi
-  после разбора ответа АПИ;
-- `to_raw()` возвращает «сырой» JSON-ответ сервера ЭСУО, который можно
-  скормить `DiarySchema.load()` из netschoolapi.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, time
 
-#: Справочник типов заданий: id из `grade/assignment/types` -> название.
-#: В реальных школах id могут отличаться, для тестов зафиксирован типовой набор.
 ASSIGNMENT_TYPES: dict[int, str] = {
     1: "Ответ на уроке",
     2: "Самостоятельная работа",
@@ -31,23 +15,19 @@ ASSIGNMENT_TYPES: dict[int, str] = {
     9: "Реферат",
 }
 
-#: Обратный справочник: название -> id (для построения «сырых» payload).
 ASSIGNMENT_TYPE_IDS: dict[str, int] = {
     name: type_id for type_id, name in ASSIGNMENT_TYPES.items()
 }
 
-
 def _date_iso(value: date) -> str:
     return value.isoformat()
-
 
 def _time_iso(value: time | None) -> str:
     return value.strftime("%H:%M") if value is not None else ""
 
-
 @dataclass
 class Assignment:
-    """Задание: домашнее задание, контрольная, ответ на уроке и т.п."""
+    """Задание: домашнее задание, контрольная, ответ на уроке и т.п"""
 
     id: int
     comment: str
@@ -58,7 +38,6 @@ class Assignment:
     deadline: date
 
     def to_dict(self) -> dict:
-        """Представление уровня библиотеки netschoolapi."""
         return {
             "id": self.id,
             "comment": self.comment,
@@ -70,11 +49,6 @@ class Assignment:
         }
 
     def to_raw(self) -> dict:
-        """Представление уровня «сырого» ответа сервера ЭСУО.
-
-        Формат повторяет ответ `student/diary`: оценка обёрнута в `mark`,
-        комментарий — в `markComment`, тип задания — в `typeId`.
-        """
         raw: dict = {
             "id": self.id,
             "assignmentName": self.content,
@@ -91,7 +65,7 @@ class Assignment:
 
 @dataclass
 class Lesson:
-    """Урок в расписании (один день, один предмет следующий по номеру)."""
+    """Урок в расписании (один день, один предмет следующий по номеру)"""
 
     day: date
     start: time
@@ -126,7 +100,7 @@ class Lesson:
 
 @dataclass
 class Day:
-    """Один день недели в дневнике (может быть без уроков)."""
+    """Один день недели в дневнике (может быть без уроков)"""
 
     lessons: list[Lesson]
     day: date
@@ -146,7 +120,7 @@ class Day:
 
 @dataclass
 class Diary:
-    """Дневник за одну неделю: расписание с заданиями и оценками."""
+    """Дневник за одну неделю: расписание с заданиями и оценками"""
 
     start: date
     end: date

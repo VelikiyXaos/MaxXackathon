@@ -9,13 +9,15 @@ from db.models import Bonus
 async def create(
     session: AsyncSession,
     *,
+    name: str,
     promocode: str,
     need_experience: int,
     partner_id: int,
     end_date: date | None = None,
 ) -> Bonus:
-    """Создаёт новый бонус и возвращает его."""
+    """Создаёт новый бонус и возвращает его"""
     bonus = Bonus(
+        name=name,
         promocode=promocode,
         need_experience=need_experience,
         partner_id=partner_id,
@@ -28,28 +30,38 @@ async def create(
 
 
 async def get(session: AsyncSession, bonus_id: int) -> Bonus | None:
-    """Возвращает бонус по id или None."""
+    """Возвращает бонус по id или None"""
     return await session.get(Bonus, bonus_id)
 
 
 async def get_all(session: AsyncSession) -> list[Bonus]:
-    """Возвращает список всех бонусов."""
+    """Возвращает список всех бонусов"""
     result = await session.execute(select(Bonus))
     return list(result.scalars())
 
 
 async def get_by_partner(session: AsyncSession, partner_id: int) -> list[Bonus]:
-    """Возвращает бонусы указанного партнёра."""
+    """Возвращает бонусы указанного партнёра"""
     result = await session.execute(
         select(Bonus).where(Bonus.partner_id == partner_id)
     )
     return list(result.scalars())
 
 
+async def get_by_promocode(
+    session: AsyncSession, promocode: str
+) -> Bonus | None:
+    """Возвращает бонус по промокоду или None"""
+    result = await session.execute(
+        select(Bonus).where(Bonus.promocode == promocode)
+    )
+    return result.scalars().first()
+
+
 async def get_available(
     session: AsyncSession, experience: int, *, date_now: date | None = None
 ) -> list[Bonus]:
-    """Возвращает бонусы, доступные при накопленном опыте."""
+    """Возвращает бонусы, доступные при накопленном опыте"""
     timestamp = date_now or date.today()
     result = await session.execute(
         select(Bonus).where(
@@ -63,17 +75,7 @@ async def get_available(
 async def get_expired(
     session: AsyncSession, *, date_now: date | None = None
 ) -> list[Bonus]:
-    """
-    Возвращает бонусы, у которых истёк срок действия.
-
-    Args:
-        session: Сессия БД.
-        date_now: Текущая дата (по умолчанию — сегодня).
-
-    Returns:
-        Бонусы с end_date < date_now. Бонусы без срока (end_date IS NULL)
-        никогда не считаются истёкшими.
-    """
+    """Возвращает бонусы, у которых истёк срок действия"""
     timestamp = date_now or date.today()
     result = await session.execute(
         select(Bonus).where(
@@ -89,7 +91,7 @@ async def update(
     bonus_id: int,
     **fields: object,
 ) -> Bonus | None:
-    """Обновляет указанные поля бонуса и возвращает его или None."""
+    """Обновляет указанные поля бонуса и возвращает его или None"""
     bonus = await session.get(Bonus, bonus_id)
     if bonus is None:
         return None
@@ -101,7 +103,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, bonus_id: int) -> bool:
-    """Удаляет бонус по id. Возвращает True, если запись удалена."""
+    """Удаляет бонус по id. Возвращает True, если запись удалена"""
     bonus = await session.get(Bonus, bonus_id)
     if bonus is None:
         return False

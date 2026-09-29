@@ -1,0 +1,24 @@
+# Копируется в образ, но в рантайме не нужна.
+.git
+.gitignore
+.idea
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Секреты: в образ попадают только через environment / env_file.
+.env
+.env.*
+!.env.template
+
+# Не относятся к рантайму.
+docs
+*.md
+!README.md

@@ -10,7 +10,7 @@ async def create(
     name: str,
     max_id: int,
 ) -> Partner:
-    """Создаёт нового партнёра и возвращает его."""
+    """Создаёт нового партнёра и возвращает его"""
     partner = Partner(name=name, max_id=max_id)
     session.add(partner)
     await session.commit()
@@ -19,12 +19,12 @@ async def create(
 
 
 async def get(session: AsyncSession, partner_id: int) -> Partner | None:
-    """Возвращает партнёра по id или None."""
+    """Возвращает партнёра по id или None"""
     return await session.get(Partner, partner_id)
 
 
 async def get_all(session: AsyncSession) -> list[Partner]:
-    """Возвращает список всех партнёров."""
+    """Возвращает список всех партнёров"""
     result = await session.execute(select(Partner))
     return list(result.scalars())
 
@@ -34,7 +34,7 @@ async def update(
     partner_id: int,
     **fields: object,
 ) -> Partner | None:
-    """Обновляет указанные поля партнёра и возвращает его или None."""
+    """Обновляет указанные поля партнёра и возвращает его или None"""
     partner = await session.get(Partner, partner_id)
     if partner is None:
         return None
@@ -46,15 +46,21 @@ async def update(
 
 
 async def get_by_max_id(session: AsyncSession, max_id: int) -> Partner | None:
-    """Возвращает партнёра по внешнему id (max_id) или None."""
+    """Возвращает партнёра по внешнему id (max_id) или None"""
     result = await session.execute(
         select(Partner).where(Partner.max_id == max_id)
     )
     return result.scalar_one_or_none()
 
 
+async def get_by_name(session: AsyncSession, name: str) -> Partner | None:
+    """Возвращает партнёра по названию или None"""
+    result = await session.execute(select(Partner).where(Partner.name == name))
+    return result.scalars().first()
+
+
 async def delete(session: AsyncSession, partner_id: int) -> bool:
-    """Удаляет партнёра по id. Возвращает True, если запись удалена."""
+    """Удаляет партнёра по id. Возвращает True, если запись удалена"""
     partner = await session.get(Partner, partner_id)
     if partner is None:
         return False

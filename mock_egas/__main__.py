@@ -1,25 +1,3 @@
-"""Самопроверка тестовых данных ЭСУО.
-
-Запуск из корня проекта:
-
-    python -m mock_egas              # сводка + проверки инвариантов
-    python -m mock_egas --raw <имя>  # «сырой» JSON-ответ АПИ для сценария
-    python -m mock_egas --text <имя> # текстовое представление дневника
-
-Проверки инвариантов повторяют ограничения схем netschoolapi:
-- неделя фиксирована: понедельник 2026-09-14 — воскресенье 2026-09-20;
-- в расписании ровно 7 дней без пропусков и дублей;
-- дата урока совпадает с датой дня:
-- время начала раньше времени окончания;
-- номера уроков в дне уникальны;
-- id заданий уникальны в пределах дневника;
-- «н/а» (-is_duty=True) задание не имеет числовой оценки.
-
-Функции `validate_diary` и `check_scenarios` можно использовать и из pytest:
-    def test_all_scenarios():
-        check_scenarios()
-"""
-
 from __future__ import annotations
 
 import json
@@ -29,12 +7,11 @@ from datetime import date, timedelta
 from mock_egas.models import Assignment, Day, Diary, Lesson
 from mock_egas.scenarios import SCENARIOS, WEEK_END, WEEK_START
 
-#: Допустимые оценки (в «Сетевом городе» оценки 2–5, единица не ставится).
 VALID_MARKS: set[int | None] = {None, 2, 3, 4, 5}
 
 
 def validate_diary(diary: Diary, name: str = "diary") -> list[str]:
-    """Проверка инвариантов тестовых данных. Возвращает список проблем."""
+    """Проверка инвариантов тестовых данных. Возвращает список проблем"""
     problems: list[str] = []
 
     if diary.start != WEEK_START:
@@ -97,7 +74,7 @@ def validate_diary(diary: Diary, name: str = "diary") -> list[str]:
 
 
 def render_text(diary: Diary) -> str:
-    """Компактное текстовое представление дневника."""
+    """Компактное текстовое представление дневника"""
     lines = [f"Неделя: {diary.start} — {diary.end}"]
     for day in diary.schedule:
         if not day.lessons:
@@ -128,12 +105,12 @@ def render_text(diary: Diary) -> str:
 
 
 def check_scenarios() -> list[str]:
-    """Проверка всех зарегистрированных сценариев."""
+    """Проверка всех зарегистрированных сценариев"""
     failures: list[str] = []
     for name in SCENARIOS:
         try:
             diary = SCENARIOS[name]()
-        except Exception as exc:  # pragma: no cover - ловится для отчёта
+        except Exception as exc:
             failures.append(f"{name}: исключение при построении: {exc!r}")
             continue
         problems = validate_diary(diary, name)

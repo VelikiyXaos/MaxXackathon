@@ -6,7 +6,7 @@ from . import session_scope
 
 
 async def grant_available_bonuses(student_id: int) -> list[Bonus]:
-    """Выдаёт ученику все доступные по опыту бонусы, которых у него ещё нет."""
+    """Выдаёт ученику все доступные по опыту бонусы, которых у него ещё нет"""
     async with session_scope() as session:
         student = await student_crud.get(session, student_id)
         if student is None:

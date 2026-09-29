@@ -7,11 +7,12 @@ from db.database import Base
 
 
 class Bonus(Base):
-    """Бонус от партнёра за накопленный опыт."""
+    """Бонус от партнёра за накопленный опыт"""
 
     __tablename__ = "bonus"
 
     id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
     promocode: Mapped[str] = mapped_column(String(255), nullable=False)
     need_experience: Mapped[int] = mapped_column(Integer, nullable=False)
     partner_id: Mapped[int] = mapped_column(ForeignKey("partner.id"), nullable=False)
@@ -21,7 +22,5 @@ class Bonus(Base):
     students: Mapped[list["Student"]] = relationship(
         secondary="student_bonus",
         back_populates="bonuses",
-        # связи student_bonus удаляет сама БД (FK ... ON DELETE CASCADE),
-        # SQLAlchemy не должен их трогать при удалении бонуса
         passive_deletes=True,
     )

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_bot() -> tuple[Bot, Dispatcher]:
-    """Собирает бота: диспетчер, роутеры и обработчики ошибок."""
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
 
@@ -30,7 +29,6 @@ async def main() -> None:
     bot, dp = create_bot()
     logger.info("Запуск бота...")
 
-    # Ежедневный опрос ЭСУО и обновление бонусов в 00:00
     asyncio.create_task(daily_update_loop())
 
     await dp.start_polling(bot)

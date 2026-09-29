@@ -10,7 +10,7 @@ async def create(
     name: str,
     subject_id: int,
 ) -> City:
-    """Создаёт новый город и возвращает его."""
+    """Создаёт новый город и возвращает его"""
     city = City(name=name, subject_id=subject_id)
     session.add(city)
     await session.commit()
@@ -19,22 +19,32 @@ async def create(
 
 
 async def get(session: AsyncSession, city_id: int) -> City | None:
-    """Возвращает город по id или None."""
+    """Возвращает город по id или None"""
     return await session.get(City, city_id)
 
 
 async def get_all(session: AsyncSession) -> list[City]:
-    """Возвращает список всех городов."""
+    """Возвращает список всех городов"""
     result = await session.execute(select(City))
     return list(result.scalars())
 
 
 async def get_by_subject(session: AsyncSession, subject_id: int) -> list[City]:
-    """Возвращает города, привязанные к субъекту (региону)."""
+    """Возвращает города указанного субъекта РФ"""
     result = await session.execute(
         select(City).where(City.subject_id == subject_id)
     )
     return list(result.scalars())
+
+
+async def get_by_name(
+    session: AsyncSession, name: str, subject_id: int
+) -> City | None:
+    """Возвращает город по названию в пределах субъекта РФ или None"""
+    result = await session.execute(
+        select(City).where(City.name == name, City.subject_id == subject_id)
+    )
+    return result.scalars().first()
 
 
 async def update(
@@ -42,7 +52,7 @@ async def update(
     city_id: int,
     **fields: object,
 ) -> City | None:
-    """Обновляет указанные поля города и возвращает его или None."""
+    """Обновляет указанные поля города и возвращает его или None"""
     city = await session.get(City, city_id)
     if city is None:
         return None
@@ -54,7 +64,7 @@ async def update(
 
 
 async def delete(session: AsyncSession, city_id: int) -> bool:
-    """Удаляет город по id. Возвращает True, если запись удалена."""
+    """Удаляет город по id. Возвращает True, если запись удалена"""
     city = await session.get(City, city_id)
     if city is None:
         return False
